@@ -9,15 +9,18 @@
 
 ---
 
-## 0. 三条不变量（任何阶段都不得违反）
+## 0. 四条不变量（任何阶段都不得违反）
 
 | # | 不变量 | 机器兜底 | 违反的后果 |
 | --- | --- | --- | --- |
 | 1 | **授权优先**：`course.toml` 的 `[license].verified != true` 时，禁止产出 `output_mode = "transcript"` | `validate.py` 硬失败（exit 1） | 侵权。这是项目最大的敌人，比翻译质量更能决定生死 |
 | 2 | **术语先行**：术语在写正文**之前**冻结；同一概念全课程同一个中文词 | `[[term:key]]` 引用不存在 → ERROR；glossary 的 `en` 出现在正文却没打标记 → WARN | 术语漂移，全课程返工，核心资产作废 |
 | 3 | **不转载**：不把英文原文、幻灯片、视频、作业答案写进仓库 | 「几乎全为 ASCII 且 > 400 字符」的段落 → ERROR | 仓库变成原课程的复制品，授权风险最高 |
+| 4 | **论文逐篇授权**：论文的授权与课程授权**完全无关**；`output_mode = "translation"` 必须 `verified = true` **且** `allows_translation = true` | `validate.py` 硬失败（exit 1）；`build.py` 另有**第二道独立闸门**（同样 exit 1，且**不产出任何站点**） | 发布我们无权翻译的论文全文。这比不变量 1 更容易发生 —— 同一门课的论文来自不同出版社，条款各不相同 |
 
 **默认产出永远是「原创中文讲解」，不是翻译。** 逐句翻译 / 字幕 / 作业答案翻译是**默认关闭**的能力，开启它需要该课程该**材料类型**的书面授权。
+
+**论文同理，而且更严。** 论文的默认产出是**我们自己写的导读**（`output_mode = "guide"`，**不设闸门** —— 思想与概念不受著作权保护）；全文翻译（`output_mode = "translation"`）必须**逐篇**拿到明确许可。课程授权再宽松，也推不出论文授权 —— 这是本项目最容易犯、后果最直接的一类错误。
 
 ---
 
@@ -39,15 +42,37 @@
                               ⑦ 发布
 ```
 
+论文（经典论文课的另一半）走一条**并行轨道**，入口在 ② 授权核实，闸门独立：
+
+```
+②P 论文登记 ──► ②Q 逐篇授权核实（★闸门）──► ④P 逐篇产出（guide 默认 / translation 需闸门）
+  papers.toml      verified + allows_translation              │
+                                                             ▼
+                                          ⑤ 校验（同一个 validate.py；ERROR 8–11）
+                                                             │
+                                                             ▼
+                                          ⑥P 人工复核（★闸门，双人签字）
+                                                             │
+                                                             ▼
+                                          ⑦P 发布（site/papers/<key>/index.html）
+```
+
+> 论文轨道的**详细流程在阶段②（§3 的 ②P/②Q）、阶段④（§5 的论文产出）、阶段⑤（§6）、阶段⑥（§7 的 ⑥P）** 里，与讲座轨道同一处展开，不再另设章节。
+
 | # | 阶段 | 命令 | 主输入 | 主输出 | 人工闸门 | 可并行 |
 | --- | --- | --- | --- | --- | --- | --- |
-| ① | 课程立项 | `python scripts/new_course.py` | `docs/course-catalog.md` | `course.toml` / `glossary.toml` / `content/` / `scripts/` | 课程 id 与中文名已登记在 catalog | — |
+| ① | 课程立项 | `python scripts/new_course.py` | `docs/course-catalog.md` | `course.toml` / `glossary.toml` / `papers.toml` / `content/` / `scripts/` | 课程 id 与中文名已登记在 catalog | — |
 | ② | 授权核实 | *（无脚本，人工动作）* | `docs/content-policy.md` 的 9 项复核清单 | `[license]` 字段 + 核实记录 | **双人签字**；未核实则保持 `verified = false` | ❌ 串行，全局闸门 |
+| ②P | 论文登记 | *（无脚本，人工动作）* | 课程大纲 / 阅读清单里的原文入口 | `papers.toml` 的 `[[paper]]` 条目（授权字段先一律 `false`） | `key` 唯一且合规；`authors` 非空数组 | ✅ 论文之间可并行 |
+| ②Q | 论文逐篇授权核实 | *（无脚本，人工动作）* | 论文页**原始 HTML** + 出版社的 permission 政策页 | `[paper.license]` 字段 + `docs/paper-licensing.md` 的结论行 | **★双人签字**（逐篇）；未核实保持 `verified = false`、`allows_translation = false` | ❌ 串行，逐篇闸门 |
 | ③ | 术语表冻结 | `python scripts/validate.py` | 官方材料（运行时只读） | 冻结版 `glossary.toml` | 术语评审 + 冻结声明 | ❌ 串行 |
 | ④ | 逐讲产出 | `python scripts/new_lecture.py` | 讲座骨架 + 冻结 glossary + 源材料 | `content/<NN>-<slug>/index.md`（`status="draft"`） | 无（草稿），但须过 §5 清单自查 | ✅ 讲与讲之间可并行 |
-| ⑤ | 校验 | `python scripts/validate.py` | 全部 `content/**/index.md` | exit code + ERROR/WARN 列表 | 无 | ✅ 可重复跑 |
+| ④P | 论文逐篇产出 | *（**没有**论文骨架脚本，手工建目录，见 §14-15）* | 该篇的 `papers.toml` 条目 + 冻结 glossary + 论文原文（运行时只读） | `content/papers/<key>/index.md`（`status="draft"`） | 无（草稿），但须过 §5 的导读 / 翻译清单自查 | ✅ 篇与篇之间可并行 |
+| ⑤ | 校验 | `python scripts/validate.py` | 全部 `content/**/index.md`（含 `content/papers/<key>/index.md`）+ `papers.toml` + `glossary.toml` | exit code + ERROR/WARN 列表 | 无 | ✅ 可重复跑 |
 | ⑥ | 人工复核 | `python scripts/validate.py` → `python scripts/build.py --out site` | 校验通过的 draft | `status = "reviewed"` → `"approved"` | **双人签字**（术语/授权改动） | ✅ 讲与讲之间可并行 |
+| ⑥P | 论文人工复核 | `python scripts/validate.py` → `python scripts/build.py --out site` | 校验通过的论文页草稿 | `status = "reviewed"` → `"approved"` | **★双人签字**（授权判定 + 导读/译文边界；`translation` 的授权复核人须≠译者） | ✅ 篇与篇之间可并行 |
 | ⑦ | 发布 | `python scripts/build.py --out site` | `approved` 讲座 | `site/`（不入库）+ CI 部署 | 目视验收 + 「非官方」声明检查 | ❌ 串行 |
+| ⑦P | 论文发布 | `python scripts/build.py --out site` | `approved` 论文页 | `site/papers/<key>/index.html` + 侧栏「论文」分组 + 首页「经典论文」列表 | 目视验收 + **授权提示条**核对 | ❌ 串行 |
 
 ---
 
@@ -76,6 +101,7 @@ python scripts/new_course.py --id mit-6.5840 --out ../courses/mit-6.5840 \
 ```
 course.toml      # 按 spec §2 填 [course] / [license] / [output]
 glossary.toml    # 空表，等待阶段 ③
+papers.toml      # 论文登记表（模板自带），条目等待阶段 ②P
 content/         # 空目录
 scripts/         # new_lecture.py / validate.py / build.py
 ```
@@ -122,13 +148,13 @@ default_mode = "explanation"
 python scripts/validate.py
 ```
 
-⚠️ **此时还没有任何讲座，校验会报「没有任何讲座」而 exit 1 —— 这是预期的，不是配置错误。**
-（当前实现把「`content/` 下没有任何讲座」也当作 ERROR；spec §6 的 ERROR 清单里**没有**这一项，见 §14-10。）
+⚠️ **此时还没有任何讲座（也没有论文页），校验会报「没有任何内容」而 exit 1 —— 这是预期的，不是配置错误。**
+（spec §6.6 已明确这一条：`content/` 下既没有讲座也没有论文页 → ERROR。新建的课程仓库**故意**停在这里。）
 
 因此阶段 ① 的验证方式改为：
 
-1. 先只确认 `course.toml` 能被解析、`[course]` 必填字段齐全 —— 把「没有任何讲座」之外的其他 ERROR 清零。
-2. 建好第一讲骨架（步骤见 §5/`course-init`）后，再跑一次 `validate.py`，此时应当 **exit 0**。
+1. 先只确认 `course.toml` 能被解析、`[course]` 必填字段齐全 —— 把「没有任何内容」之外的其他 ERROR 清零。
+2. 建好第一讲骨架（步骤见 §5 / `course-init`；第一篇论文页见 §5 的论文产出）后，再跑一次 `validate.py`，此时应当 **exit 0**。
 
 ### 人工闸门 ①
 - [ ] `course.id`、`title_zh` 与 `docs/course-catalog.md` 一致（不允许各写各的）
@@ -202,6 +228,91 @@ python scripts/validate.py
 ```
 只要存在任一 `output_mode = "transcript"` 的讲座而 `verified != true`，**exit 1**（spec §6.2）。
 把这条当成**事后报警器，不是授权流程的替代品** —— 一个已经写好的逐字稿被拦下来，意味着前面全白做且已经产生侵权风险。
+
+### 阶段 ②P / ②Q · 论文登记与逐篇授权核实（★ 又一道独立的闸门）
+
+**论文的授权与课程授权完全无关。** 一门课是 CC BY 3.0 US，**推不出**它课表上的 MapReduce（USENIX）或 GFS（ACM）可以翻译。所以论文**不用**课程级布尔，而是每篇一个 `[paper.license]`（spec §10.1）。
+
+#### ②P 登记：先登记，再写内容
+
+读课程大纲 / 阅读清单，把**要做的论文先全列出来**，逐篇写进课程仓库根目录的 `papers.toml`：
+
+```toml
+[[paper]]
+key = "mapreduce"                 # 必填，唯一；只允许小写字母、数字与连字符
+title = "MapReduce: Simplified Data Processing on Large Clusters"
+authors = ["Jeffrey Dean", "Sanjay Ghemawat"]   # 必填，非空数组（不要写成一个字符串）
+venue = "OSDI 2004"               # 必填
+year = 2004                       # 可选
+publisher = "USENIX"              # 可选但强烈建议：决定去查谁的政策页
+url = "https://..."               # 必填：论文的官方条目页（不是作者主页的 PDF）
+pdf_url = ""                      # 可选（可以填，但不构成任何授权）
+
+[paper.license]
+verified = false                  # ★ 未核实就是 false，别猜
+terms = ""
+evidence_url = ""
+checked_at = ""
+allows_translation = false        # ★ 与 verified 相互独立，见 ②Q
+allows_commercial = false
+share_alike = false
+notes = "未核实。核实方法与结论见 docs/paper-licensing.md"
+```
+
+登记阶段的纪律：
+
+- **一律先写 `verified = false` / `allows_translation = false`** —— 先占位，核实结论在 ②Q 才写。
+- `key` 一旦定下就不要再改：它同时是目录名 `content/papers/<key>/` 与站点 URL `site/papers/<key>/`。
+- `authors` 必须是**非空数组**，不要写成一个字符串；`venue` / `url` 缺一个就 ERROR（spec §6.8）。
+- `url` 填论文的**官方条目页**（USENIX / ACM DL / IEEE Xplore）；作者主页上的 PDF **不是**授权来源。
+- `publisher` 不是必填，但它直接决定 ②Q 要去查谁的政策页 —— 填上，省事的是自己。
+- 逐篇的结论汇总在 [paper-licensing.md](./paper-licensing.md)：它是**逐篇授权的权威来源**，`notes` 里指向它。
+
+#### ②Q 核实：四步方法（spec §10.6，都是踩过的坑）
+
+> **这一阶段没有命令。** 授权是**读原文并记录**的人工动作；用记忆填 `terms` 比留空**更危险**。
+
+1. **抓原始 HTML，不要过滤标签后再搜文本。** 许可常常只是一个 `rel="license"` 属性或图片徽章的 `href`。本项目就因此误判过一次：6.824 主页的 CC BY 3.0 US 徽章**是纯图片链接、没有任何可见文字**，只扫文本会得出「未声明许可 = 保留所有权利」的相反结论（见 [course-catalog.md](./course-catalog.md)）。把原始页面落盘留证再搜。
+2. **「能免费下载」≠「允许翻译」。** 作者把 PDF 挂在自己主页上**没有授予任何许可**，法律状态仍是保留所有权利。URL 可达 ≠ 有授权。
+3. **查出版社政策，不只看论文页。** 多数经典系统论文的版权在 **ACM / IEEE / USENIX**。ACM 有**明确的翻译授权流程** —— 那意味着「默认不可翻译，须先申请」。论文页上没有许可声明时，下一步就是看出版社的 copyright / permissions 页。
+4. **逐篇记录 `evidence_url` 与 `checked_at`。** 无法核实的保持 `verified = false`，在 `notes` 写「未确认」，**不要推测**。
+
+⚠️ **同一篇论文的「会议版 / 技术报告 / 扩展版」条款可能不同**（Raft 的会议版与技术报告版就是常见的例子）。`papers.toml` 的 `url` 必须与 `evidence_url` 指向**同一版**。
+
+#### `[paper.license]` 的判定口径（spec §10.3）
+
+| 字段 | 含义 | 谁在用 |
+| --- | --- | --- |
+| `verified` | 是否**已经实际核实过**这篇论文的条款 | 与 `allows_translation` 一起构成翻译闸门 |
+| `allows_translation` | 条款是否**明确允许翻译** | 同上；「已核实」而这里为 `false` = **仍然不能翻译** |
+| `allows_commercial` | 是否允许商用 | 商业使用决策 |
+| `share_alike` | 是否有 SA 传染（产出须以同协议发布） | 授权边界（content-policy） |
+
+- **`verified = true` 的四条前置**（缺一不可，与讲座 `[license]` 同级严格）：`terms` 非空且是**原文照抄**的条款名；`evidence_url` 非空且复核者**本人打开过**；`checked_at` 是 ISO 日期；`allows_translation` 已明确判断。
+- `verified = true` 而 `terms` / `evidence_url` / `checked_at` 任一为空 → `validate.py` **exit 1**（spec §6.8）。
+- **`verified` 与 `allows_translation` 是两件事。** 核实的结果完全可能是「查明有版权、须走授权流程」—— 那正是 `verified = true` + `allows_translation = false`，**翻译仍被闸门拦死**。这正是 `allows_translation` 独立存在的原因。
+- 注意 `[paper.license]` **没有** `allows_derivatives` 字段：论文这边「能不能改编」被收窄成了更具体的「能不能翻译」，查那一项就够。
+
+#### 人工闸门 ②Q（双人签字，**逐篇**）
+
+- [ ] 证据由**第二人独立复核**（自己再看一遍不算复核）
+- [ ] `evidence_url` 指向的是**该论文**的条款或**其出版社**的授权政策，而不是别处的仿制页、聚合站
+- [ ] 判定只依据 `evidence_url` 的原文，不依据「大家都这么用」「课表上就挂着 PDF」
+- [ ] **不拿别的论文的条款顶替** —— 同一门课里 MapReduce（USENIX）与 GFS（ACM）各不相同
+- [ ] **不拿课程的 `[license]` / `[license.materials]` 顶替** —— 那是课程材料的授权，与论文无关
+- [ ] 未核实 / 无法核实 → `verified = false`、`allows_translation = false`，并在 `notes` 写明「未确认」
+- [ ] 结论一行已落到 [paper-licensing.md](./paper-licensing.md)（含原文引用与访问日期）
+
+#### 机器兜底
+
+```bash
+python scripts/validate.py
+```
+
+论文相关的 ERROR（spec §6.8–§6.11）：`papers.toml` 缺字段 / `key` 不合规或重复 / `verified = true` 但证据字段为空；论文页缺 `kind = "paper"` 或必填字段 / `paper` 未登记或重复 / `output_mode` 不是 `guide` / `translation`；**`translation` 而该篇授权不允许翻译**；讲座 `papers = [...]` 引用了未登记的 key。
+
+`build.py` 在论文翻译闸门上有**第二道独立检查**：命中即 exit 1，**且不产出任何站点**（spec §7）。
+和讲座一样，把它当**事后报警器，不是授权流程的替代品**。
 
 ---
 
@@ -347,6 +458,116 @@ output_mode = "explanation"
 ### 人工闸门 ④
 无。草稿阶段不设闸门，但要保证每讲都真的过了上面的清单 —— 把没自查的稿子丢给复核者是浪费复核者。
 
+### 论文产出（④P）· 导读（默认）与全文翻译
+
+**一篇论文 = 一个 `content/papers/<key>/index.md`**，`<key>` 必须与 `papers.toml` 中已登记的 `key` **逐字符一致**（它同时是目录名与站点 URL）。
+
+> ⚠️ **没有骨架脚本。** `new_lecture.py` 只生成讲座，论文页的目录与 front matter 目前要**手工建**（见 §14-15）。手工建最容易漏 `kind = "paper"` 或把 `paper` 的 key 拼错 —— 这两条都是 ERROR。建完目录立刻跑一次 `validate.py`。
+
+#### 第 1 步 · 确认登记（②P / ②Q 已完成）
+
+`papers.toml` 里必须有这篇，且 key 拼写一致。**没登记就先回阶段 ②P**：论文页的 `paper` 指向未登记的 key 会直接 ERROR（spec §6.9）。
+
+#### 第 2 步 · 先决定档位（本轨道最关键的一次判断）
+
+| 情况 | 档位 | 为什么 |
+| --- | --- | --- |
+| 未核实 / 核实为「不允许翻译」 / 还没核实完（**默认情况**） | `output_mode = "guide"` | 导读是我们自己写的，概念与思想不受著作权保护，**不需要任何授权** |
+| `verified = true` **且** `allows_translation = true`（两条都成立，且证据已入库） | `output_mode = "translation"` | 只有此时全文翻译才被允许 |
+
+**默认答案永远是 `guide`。** 遇到「不确定能不能翻译」，不要卡在那里等结论 —— **写导读，然后开工**。
+`guide` 不是妥协品：一篇讲清「要解决什么问题、怎么解、代价是什么」的导读，对读者比一篇没人校对的全译更有用。范式见 `template/content/papers/mapreduce/index.md`。
+
+**只「核实了」不够**：`verified = true` + `allows_translation = false` = 仍然**只能写 `guide`**。
+
+#### 第 3 步 · front matter（spec §10.2，5 个字段，不加字段）
+
+```markdown
++++
+kind = "paper"
+paper = "mapreduce"
+title = "MapReduce 导读"
+status = "draft"
+output_mode = "guide"
++++
+```
+
+- `kind` 固定为 `"paper"`；`paper` 是 `papers.toml` 的 key；`status` 新写的永远是 `"draft"`；`output_mode` 只能是 `guide` 或 `translation`。
+- **论文页没有 `lecture` / `slug` / `source_kind` / `source_url`** —— 作者、出处、来源链接全部由 `papers.toml` 提供，**同一事实不要写两处**。写了也不算错，但它们不生效、只会误导后来人，别写。
+- 论文页与讲座**共享** `glossary.toml`：正文里的术语同样要打 `[[term:key]]`，glossary 的 `en` 原词出现却没打标记同样 WARN（spec §6.12）。
+
+#### 第 4 步 · 写导读（`guide`，默认档）
+
+导读要**真的教这篇论文**，而不是复述摘要。合格的导读至少包含这七块：
+
+1. **它要解决什么问题** —— 具体到当时的具体麻烦（什么任务、什么量级、旧办法为什么不行）。不要写「随着互联网的发展」。
+2. **核心主张 / 核心抽象** —— 论文真正贡献的那个想法（MapReduce 是两个函数 + 框架接管并行），并用一句话说清「它把什么变成了不用再想的前提」。
+3. **机制走查** —— 关键路径按顺序讲清楚：数据怎么流、谁做什么决定、哪一步是设计的枢纽。讲**「为什么这么设计」**，不只讲「设计成什么样」。
+4. **边界与代价** —— 论文自己承认的限制（不适合迭代式算法、单点、磁盘布局……）。这一段最能区分「真读过」和「抄了摘要」。
+5. **与课程的关系** —— 它是后面哪几讲的直觉前置；可以在讲座 front matter 里用 `papers = ["<key>"]` 做成结构化交叉链接（spec §10.4）。
+6. **读完应该能回答** —— 3 个左右的**判断力**问题（不是知识问答）。
+7. **溯源** —— `papers.toml` 的 `url` + 本文对应的章节位置；**给位置，不给文本**。
+
+配图放 `content/papers/<key>/figures/`，命名 `figures/<key>-<n>.svg`（沿用讲座的约定，见 §14-8 / §14-17）；正文用**相对路径**引用，**alt 必写中文结论**；需要画图走 `course-diagram`。
+
+#### 论文导读交付清单（`guide`）
+
+**契约层**
+- [ ] front matter 5 字段齐全（`kind` / `paper` / `title` / `status` / `output_mode`），`+++` 成对
+- [ ] `paper` 与 `papers.toml` 的 `key` 逐字符一致，且该 key 没有被另一个论文页用过
+- [ ] `output_mode = "guide"`；**没有**写 `lecture` / `slug` / `source_kind` / `source_url`
+- [ ] 每个 `[[term:key]]` 的 key 都在 `glossary.toml` 中；glossary 的 `en` 原词都已打标记
+- [ ] 没有任何「几乎全为 ASCII 且 > 400 字符」的段落 —— **导读里一段原文都不放**（论文页走同一套正文检查）
+
+**内容层**
+- [ ] 问题、主张、机制、代价四块俱全，且都能指到论文的具体位置
+- [ ] 机制部分讲了「为什么这么设计」，不只是「设计成什么样」
+- [ ] 有「读完应该能回答」的检查问题（3 个左右）
+- [ ] 有溯源位置，且与 `papers.toml` 的 `url` 一致
+- [ ] 配图是自己画的；alt 是中文结论
+- [ ] 语气像助教不像营销号；无禁用词（`docs/brand.md`）
+
+#### 第 5 步 · 写全文翻译（`translation`，默认关闭）
+
+**只有在 ②Q 已经记录，且 `verified = true` 与 `allows_translation = true` 两条都成立时**才动这一步。
+开工前把该篇 `[paper.license]` 的原文（`terms` / `evidence_url` / `checked_at`）贴进 PR 描述 —— 复核者要看的不是「我确认过了」，而是**你依据的那一条条款**。
+
+译文与我们的原创讲解**混在同一页里**，因此它继承与逐字稿翻译同级的风险。要求：
+
+1. **遵守 `glossary.toml`**：术语译法与全课程一致，首现给「中文（English）」，之后统一用中文；已冻结术语照样打 `[[term:key]]`。
+2. **忠实**：不增、不删、不「润色」掉作者的限定条件；译者的补充必须**单独成小节**并显式标注「译者注」。
+3. **不夹带原文**：正文里不放整段英文原文（必要的术语、代码、公式、专有名词除外）。想做中英对照 → 那是另一个决定，需要单独的授权判断。
+4. **图 / 表 / 公式自己重画或转写**，不得截图、不得复制原始论文的图片 —— 原图同样受著作权保护。
+5. **署名与出处交给 `papers.toml`**：标题、作者、venue、官方链接由页面自动渲染，正文不要再抄一遍；正文只补「本译文对应的版本与章节范围」。
+6. **开头写明这是译文**：论文标题、作者、venue、年份、官方链接、版本与章节范围、授权依据（`terms` + `evidence_url`），并保留页面自动生成的授权提示条。
+
+#### 论文翻译交付清单（`translation`，比导读更严）
+
+> **这份清单里任何一项 fail，都必须退回 `guide`** —— 而不是「先发出去再补」。
+
+**闸门层（先过这四条，其他都是次要的）**
+- [ ] `papers.toml[key].license.verified == true`，且证据三件套（`terms` / `evidence_url` / `checked_at`）非空
+- [ ] `papers.toml[key].license.allows_translation == true`
+- [ ] 证据针对的是**这一版**论文（会议版 / 技术报告 / 扩展版不要混）
+- [ ] `evidence_url` 已由**第二人**独立打开复核过，结论落到 [paper-licensing.md](./paper-licensing.md)
+
+**契约层**
+- [ ] front matter 5 字段齐全；`paper` 与登记的 `key` 一致
+- [ ] `output_mode = "translation"`
+- [ ] 术语全部走 `glossary.toml`；`[[term:key]]` 无未登记 key、无漏标
+- [ ] `python scripts/validate.py` **exit 0**（论文翻译闸门通过）
+
+**译文层**
+- [ ] 术语与全课程一致（抽 5 个术语全文搜索）
+- [ ] 无漏译、无整段跳过、无「译者补充」混进正文
+- [ ] 无原文段落夹带；图 / 表是**重画或转写**，不是截图或复制
+- [ ] 版本与章节范围已在开头写明
+- [ ] 抽读 3 段与原文逐句对照：有无添油加醋、有无抹掉限定条件
+
+**复核层**
+- [ ] 复核者与译者**不是同一人**（译文尤其不能自审）
+- [ ] 复核意见落到**行号 + 原句 + 最小修改建议**，不允许「再打磨一下」
+
 ---
 
 ## 6. 阶段 ⑤ 校验
@@ -372,8 +593,20 @@ python scripts/validate.py
 | 4 | `[[term:key]]` 的 key 不在 glossary | 拼写错误 → 改正；多词术语要连字符化（`leader election` → `[[term:leader-election]]`）；确实是新术语 → **回阶段 ③ 走评审加词**（不要就地写个中文替代） |
 | 5 | glossary 的 `en` / `zh` 为空或 `en` 重复 | 补空值；`en` 重复 → 合并为一个条目，其余进 `aliases` |
 | 6 | 正文有「几乎全为 ASCII 且 > 400 字符」的连续段落 | 十有八九是照抄原文：**删掉重写成中文讲解** |
+| 8 | **论文登记表**：`papers.toml` 的 `[[paper]]` 缺 `key` / `title` / `authors`（非空数组）/ `venue` / `url`，或缺 `[paper.license]` 段，或 `verified = true` 而 `terms` / `evidence_url` / `checked_at` 为空 | 补字段；`authors` 写成**数组**（`authors = ["A", "B"]`）而不是字符串；`verified = true` 必须有证据三件套，**没证据就把 `verified` 改回 `false`** —— 反过来「补」证据字段去凑，就是伪造授权 |
+| 9 | **论文页**：缺 `kind = "paper"` 或 `title` / `paper` / `status` / `output_mode`；`paper` 未在 `papers.toml` 登记或重复；`output_mode` 不是 `guide` / `translation` | 补字段；`paper` 与登记表的 `key` 逐字符对齐；**一篇论文只允许一个论文页**（`content/papers/<key>/index.md`） |
+| 10 | **论文翻译闸门**：`output_mode = "translation"` 而该篇 `verified` 或 `allows_translation` 不为 `true` | **默认改回 `guide`**，照常写导读。**绝对不要为了过校验去改 `verified` / `allows_translation`** —— 那是伪造授权证据。真要开翻译，先回阶段 ②Q 拿到并记录该篇的明确许可 |
+| 11 | 讲座 front matter 的 `papers = [...]` 引用了 `papers.toml` 中未登记的 key | 回阶段 ②P 登记该论文，或改掉写错的 key；引用的必须是登记表里的 `key` |
 
-**关于 ERROR 6 的判定口径**（当前实现，spec §6.6 未写细节，见 §14-5）：段落需同时满足
+> **编号说明**：本表 #1–#6 沿用**实现侧的旧编号**（它们对应 spec §6 的 ERROR 1–4、6、7）；#8–#11 直接用 **spec §6 的编号**。spec §6.6「`content/` 下既没有讲座也没有论文页」不单列 —— 它是空仓库的正常现象，见 §2。
+
+**论文轨道的三条提醒**
+
+- **转载探测管不了译文。** 它只识别「几乎全为 ASCII 的长段落」，而合规的译文本来就是中文 —— 所以 `translation` 的**唯一防线是 ②Q 的逐篇授权闸门 + 阶段 ⑥P 的加严复核**。机器既拦不住一篇没授权的译文（只要它是中文写的），也拦不住一篇译错的译文。**别因为 exit 0 就以为译文安全。**
+- **论文页与讲座走同一套正文检查**（术语引用、漏标 WARN、转载探测）。导读里粘原文段落，一样会被拦下。
+- `build.py` 的论文翻译闸门是**独立的第二道**：即使有人绕过 `validate.py`，构建仍会 exit 1 且**不产出 `site/`**（spec §7）。
+
+**关于 ERROR 6 的判定口径**（当前实现，spec §6.7 未写细节，见 §14-5）：段落需同时满足
 `长度 > 400 字符` **且** `ASCII 占比 ≥ 90%` **且** `空格数 ≥ 40` 才算可疑；
 判定前会**剥离行内代码、链接与 Markdown 标记**，并且**跳过围栏代码块、标题行与表格行**。
 
@@ -387,6 +620,9 @@ python scripts/validate.py
 | --- | --- | --- |
 | 7 | glossary 的 `en` 原词出现在正文但未打标记 | **必查**。要么是漏标术语（→ 补 `[[term:key]]`），要么是术语漂移（→ 改回 glossary 的 `zh`）。两者都是真实缺陷 |
 | 8 | `status = "draft"` 的讲座在 `build` 时会被标注「草稿」 | 发布前把状态推到 `reviewed` / `approved` |
+
+> **WARN 的编号**同样沿用实现侧的旧编号（#7 / #8 对应 spec §6 的 WARN 12 / 13）。上表 ERROR 的 #8–#11 用的是 **spec 编号**，与这里的 #8 **不在同一序列**里 —— 看编号时先看表头。
+> 论文页的草稿标记还有一个口径问题（导航里显示的是「导读 / 全文翻译」档位标签，不是草稿标记），见 §14-16。
 
 ---
 
@@ -417,6 +653,35 @@ python scripts/build.py --out site      # 本地预览，别只看 Markdown
 - [ ] 复核者的驳回意见必须落到**行号 + 具体修改**，不允许「再打磨一下」这种不可执行的评语
 - [ ] 授权边界一经质疑，**立即下线，不讨论、不等结论**（content-policy 下线机制）
 
+### 阶段 ⑥P · 论文复核（★ 闸门，双人）
+
+论文页与讲座同样走 `draft` → `reviewed` → `approved`，但复核的问题**多一条，而且是最重要的一条**：这篇的**档位对不对**（该不该是 `translation`）。
+
+```bash
+python scripts/validate.py
+python scripts/build.py --out site      # 论文页要看授权提示条与元数据，别只看 Markdown
+```
+
+#### `guide` 的复核（引用行号 + 原句 + 最小修改建议）
+- [ ] §5 的《论文导读交付清单》全部 pass
+- [ ] 抽读「机制」与「代价」两段，问一句：「这段是我们读出来的，还是摘要的复述？」有疑虑就驳回
+- [ ] 页面元数据正确：标题 / 作者 / venue / 出版社 / 原文链接都来自 `papers.toml`，且与登记表一致
+- [ ] **档位复核**：确认该篇的 `[paper.license]` 确实不满足翻译条件（或即使满足、我们仍选择只发导读）
+- [ ] 若有相关讲座声明了 `papers = ["<key>"]` → 交叉链接双向可用
+
+#### `translation` 的复核（**加严**）
+- [ ] §5 的《论文翻译交付清单》全部 pass
+- [ ] **授权复核人 ≠ 译者**，且授权结论由第二人**独立打开 `evidence_url` 验证过**
+- [ ] 确认 `allows_translation = true` 是**这一版论文**的结论（会议版 vs 技术报告版不要混）
+- [ ] 抽 3 处与原文逐句对照：有无漏译、有无增益、限定条件有没有被抹掉
+- [ ] 图 / 表是**重画或转写**，不是截图、不是原始图片的复制
+- [ ] 版本号与章节范围已在译文开头写明
+
+#### 人工闸门 ⑥P
+- [ ] 只有 `status = "approved"` 的论文页才能进阶段 ⑦P
+- [ ] **授权判定有任何疑点 → 立刻退回 `guide`**（宁可只发导读，不发译文）
+- [ ] 一旦被指出超出授权范围 → 走 content-policy 的**立即下线**流程，不讨论、不等结论
+
 ---
 
 ## 8. 阶段 ⑦ 发布
@@ -430,11 +695,12 @@ python scripts/build.py --out site --base-url /courselingo/
 ```
 > `build.py` 的 CLI 就是 spec §7 定义的两个选项：`--out`（默认 `site`）与 `--base-url`（默认 `/`）。**不要用未定义的参数。**
 
-### 构建产物（spec §7）
+### 构建产物（spec §7 / §10.5）
 ```
-site/index.html            课程首页 + 讲座目录
-site/<slug>/index.html     每篇讲座
-site/glossary/index.html   术语表
+site/index.html                课程首页 + 讲座目录 + 「经典论文」列表
+site/<slug>/index.html         每篇讲座
+site/papers/<key>/index.html   每篇论文页（导读或全文翻译；相对根目录两层，故 base="../../"）
+site/glossary/index.html       术语表
 site/assets/style.css
 ```
 
@@ -447,6 +713,15 @@ site/assets/style.css
 - [ ] **站点里没有任何英文原文段落、课件、视频、作业答案**
 - [ ] 无任何学校校徽 / 课程 Logo / 官方背书暗示（brand.md 禁止事项）
 
+#### 论文页专项验收（⑦P，必须逐篇打开看）
+
+- [ ] 打开 `site/papers/<key>/index.html`：元数据（标题 / 作者 / venue / 出版社 / 原文链接）与 `papers.toml` 一致
+- [ ] **授权提示条**存在且与档位相符：`guide` 显示「本篇为我们自己撰写的导读，不含原文段落」；`translation` 显示「已核实、允许翻译」并带 `terms`
+- [ ] 该篇 `verified = false` 时，页面**不得**出现任何「已授权 / 已核实」措辞（提示条应显示「未核实，或条款未明确允许全文翻译」）
+- [ ] 侧栏出现「**论文**」分组，首页出现「经典论文」列表；论文页的相对路径都对（`base="../../"`）
+- [ ] `translation` 的论文页：**整页没有整段英文原文**；图 / 表是重画的，不是截图
+- [ ] 论文页与相关讲座之间的交叉链接（`papers = [...]`）可来回跳转
+
 ### CI（spec §8）
 | 工作流 | 触发 | 行为 |
 | --- | --- | --- |
@@ -457,7 +732,7 @@ site/assets/style.css
 - [ ] 上面的目视验收全过
 - [ ] `site/` **不入库**（检查 `.gitignore`）—— 构建产物不进版本历史
 - [ ] 提交信息用祈使句 + 范围前缀（CONTRIBUTING §4），如 `6.824: 讲解 Lecture 3 主从复制`
-- [ ] 发布范围只含 `approved` 的讲座
+- [ ] 发布范围只含 `approved` 的讲座与**论文页**；`translation` 的论文页还要在 PR 描述里附 `evidence_url` 的原文引用（授权依据不是「我确认过」，而是那一条条款）
 
 ---
 
@@ -551,6 +826,60 @@ B 质量层
 禁止：不要重写全文；不要修改 glossary.toml；不要用「再打磨一下」这类不可执行的评语。
 ```
 
+### 9.4 写一篇论文导读（阶段 ④P，`output_mode = "guide"`，默认档）
+
+```text
+你是 CourseLingo（译课 AI）的论文导读作者。你写的是**我们自己写的导读**，不是翻译，也不包含原文段落。
+
+任务：为课程 <course.id> 的论文 <papers.toml 里的 key>（《<论文标题>》，<venue> <year>）产出 content/papers/<key>/index.md。
+
+先读：papers.toml 中该篇的条目、glossary.toml（必须遵守）、docs/pipeline-spec.md §10、docs/content-policy.md、docs/brand.md，以及 template/content/papers/mapreduce/index.md（导读的范式）。
+
+硬约束：
+1. output_mode 只能是 "guide"。禁止逐句翻译、禁止摘译、禁止在正文里放英文原文段落 —— 连"引用一句原文"都不要做。
+2. front matter 只有 5 个字段：kind = "paper" / paper = "<key>" / title = "<中文标题>" / status = "draft" / output_mode = "guide"。不要写 lecture / slug / source_kind / source_url —— 作者、出处、链接由 papers.toml 提供，同一事实不写两处。
+3. 术语：正文出现已冻结术语时用 [[term:<key>]] 标记（key 由 glossary 的 en 派生：小写、空格与下划线转连字符）；不要用中文替代词绕过标记，也不要直接写英文原词。需要新术语 → 回 course-init 走评审加词。
+4. 不转载：不得复制论文的句子、图表、图片、公式排版。图必须自己画（走 course-diagram），放 content/papers/<key>/figures/<key>-<n>.svg，正文用相对路径引用，alt 写中文结论。
+5. 不得出现成段的英文散文（「几乎全为 ASCII 且长度 > 400 字符」的段落会 ERROR；论文页也走这条检查）。
+6. 只依据论文本身与公开的官方信息。不得凭记忆编造实验数字、年份、机构名；拿不准就写"论文给出的数字是 X（原文 §N）"，不要自己推算。
+
+正文结构（必须齐全，七块）：
+- 它要解决什么问题（具体的麻烦、量级、旧办法为什么不行）
+- 核心主张 / 核心抽象（一句话说清它把什么变成了不用再想的前提）
+- 机制走查（关键路径按顺序；讲"为什么这么设计"，不只讲"设计成什么样"）
+- 边界与代价（论文自己承认的限制）
+- 与课程的关系（它是后面哪几讲的直觉前置）
+- 读完应该能回答（3 个左右判断题，不是知识问答）
+- 溯源（论文官方入口 + 本文对应的章节位置；给位置，不给文本）
+
+输出：一个完整的 index.md，然后附一张自查表（逐项 pass/fail，fail 的给出修改）。
+```
+
+### 9.5 写一篇论文全文翻译（阶段 ④P，`output_mode = "translation"`，**默认关闭**）
+
+> **先停下来核对闸门。** 本提示词只在前置条件成立时才可用：
+> `papers.toml[key].license.verified == true` **且** `allows_translation == true`，且 `terms` / `evidence_url` / `checked_at` 都有值。
+> 任一不成立 → **改用 9.4 写导读**，不要翻译，也不要先去改授权字段。
+
+```text
+你是 CourseLingo（译课 AI）的论文译者。任务：把论文《<标题>》（<venue> <year>）全文翻译为中文，产出 content/papers/<key>/index.md，output_mode = "translation"。
+
+前置（已在 papers.toml 中记录，你必须先读，并在输出开头复述一遍）：
+- terms = "<条款名>"；evidence_url = "<核实依据>"；checked_at = "<ISO 日期>"
+- 若这三项任一为空，或 allows_translation 不为 true → 立即停止，改产出导读（见 9.4），不要翻译。
+
+硬约束：
+1. front matter 只有 5 个字段：kind = "paper" / paper = "<key>" / title = "<中文标题>" / status = "draft" / output_mode = "translation"。
+2. 术语一律用 glossary.toml 的译法，首次出现给「中文（English）」，之后统一用中文；已冻结术语用 [[term:<key>]] 标记。
+3. 忠实：不增、不删、不"润色"掉作者的限定条件；译者的补充必须单独成小节并显式标注「译者注」。
+4. 正文不夹带整段英文原文（术语、代码、公式、专有名词除外）。若确需中英对照，另起小节并说明理由。
+5. 图 / 表 / 公式：重画或转写，不得截图、不得复制原始图片；重画的图走 course-diagram，存 content/papers/<key>/figures/。
+6. 开头写明：论文标题、作者、venue、年份、官方链接、本文对应的版本与章节范围、授权依据（terms + evidence_url）。
+7. 不复制论文的排版与版式；不加入任何出版社 / 学校的 Logo。
+
+输出：一个完整的 index.md + 一张自查表（逐项 pass/fail），并在最后单列一节「不确定译法」，列出拿不准的 5 处及候选译法与理由。
+```
+
 ---
 
 ## 10. 质量基线（`reviewed` 的准入门槛）
@@ -586,6 +915,15 @@ B 质量层
 | **`site/` 进版本库** | 构建产物出现在 diff 里 | `.gitignore` 缺项 | 确认 `site/` 已忽略；发布只推源码 |
 | **凭空发明接口** | 出现 spec 里没有的命令参数或 TOML 字段 | 想当然 | 只有 `validate.py` / `build.py` 的 CLI 是冻结的（§7）；其余脚本参数先查 spec，没有就进 §14 |
 | **`default_mode` 与逐讲 `output_mode` 不一致** | 闸门判定含糊 | spec 未定义优先级（§14-3） | 闸门判定**以逐讲 `output_mode` 为准**（spec §6.2 就是这么查的）；保持 `default_mode = "explanation"` 直到阶段 ② 给出结论 |
+| **把「能免费下载」当成许可**（论文） | `papers.toml` 的 `evidence_url` 填的是作者主页的 PDF 链接或镜像站 | 「PDF 能公开打开」≠「授予翻译权」；法律状态仍是保留所有权利 | `evidence_url` 必须指向**条款本身**（许可声明 / 出版社的 permission 政策页）；PDF 链接只能进 `url` / `pdf_url`；②Q 四步方法第 2 条 |
+| **用一篇论文的条款顶替另一篇** | GFS（ACM）沿用了 MapReduce（USENIX）的 `terms`，或整门课的论文填了同一个 `evidence_url` | 同一门课的论文来自不同出版社，条款各不相同 —— 这正是 `papers.toml` 逐篇一个 `[paper.license]` 的原因 | 每篇单独抓、单独填、单独签字；发现两篇的 `evidence_url` 完全相同就当成红灯复查 |
+| **拿课程授权当论文授权** | `course.toml` 是 `verified = true`（甚至 `[license.materials].notes = true`），于是顺手把论文的 `verified` 也置 `true` | 课程材料的授权与论文**完全无关**；「课程笔记已核实」推不出「论文可以翻译」 | 论文的 `verified` / `allows_translation` 只依据 `[paper.license].evidence_url`，课程字段一个字都不看（②Q 清单里有这一条） |
+| **「已核实」被当成「可以翻译」** | `verified = true` 但 `allows_translation = false`，仍有人把论文页设成 `translation` | `verified` 只表示「查清楚了」；查清楚的结果可能是「有版权、须走授权流程」 | 两个条件缺一不可（spec §10.3）；`validate.py` ERROR 10 与 `build.py` 的独立闸门各拦一次；默认答案永远是 `guide` |
+| **为过校验改授权字段** | 为了让 `translation` 通过校验，把 `verified` / `allows_translation` 改成 `true` | 把「希望」写成了「事实」 | **红线行为**（等于伪造授权证据）。证据字段只允许**在拿到 `evidence_url` 支撑、并经第二人复核后**从 `false` 改成 `true` |
+| **「大家都分享 PDF」** | 付费墙后的论文也有人贴 PDF，于是认为可以翻译 | 灰色流通 ≠ 授权；反而说明该篇很可能**没有**开放许可 | ACM DL / IEEE Xplore / 付费墙上的论文默认「不可翻译」，除非出版社政策或书面许可明确允许 |
+| **导读里夹带原文** | 导读为了「忠实」贴了一大段英文原文与图表 | 导读的授权优势来自「只讲概念、不复制表达」，夹带就把它抹掉了 | 导读不放原文段落、不复制图表（机器能以 ASCII 长段落拦下一部分，但**拦不住图片**） |
+| **译文没人对照原文复核** | 译文推到 `approved`，而 `validate.py` 全程 0 ERROR | 转载探测只看 ASCII 长段落，**合规译文本来就是中文 —— 机器识别不了译得好不好，也识别不了有没有授权**（见 §14-18） | `translation` 的唯一防线是 ②Q 的逐篇授权 + ⑥P 的加严清单（译者与授权复核人分离、抽 3 处逐句对照） |
+| **论文档位定错（该导读却做了翻译）** | 没有任何报错，但论文页是 `translation`，而该篇其实只有「可下载」没有「可翻译」 | 把「先做着，回头补授权」当成了流程 | ②Q 的结论落进 `papers.toml` 之后才允许动 ④P；`translation` 的开工前置是**两个 true + 证据三件套**，缺一个就写导读 |
 
 ---
 
@@ -603,6 +941,8 @@ B 质量层
 | 同一讲的「正文」与「配图」 | 2 路 | 图的分工在写作前定好（哪些小节要图） |
 | 第 N 讲的自审 与 第 N+1 讲的初稿 | 2 路 | 自审的输出只影响第 N 讲 |
 | 不同讲座的**复核** | 每讲一个复核者 | 复核者与作者**不同**（自审不能替代复核） |
+| 不同论文的**导读初稿** | 每篇一个 subagent | 该篇已在 `papers.toml` 登记；每篇都必须要求「不复制原文」 |
+| 不同论文的**授权核实** | 每篇一路 | 但**证据与签字是逐篇的**：每篇各自抓 `evidence_url`、各自签字，不许把一批结论糊成一行 |
 
 并行时每个 subagent 的输入必须完全相同地包含：**冻结 glossary 全文 + 同一份提示词（§9.2）+ 本讲编号/slug**。
 
@@ -613,6 +953,8 @@ B 质量层
 | 阶段 ③ 术语冻结 | 它是并行的前提 |
 | **glossary 的任何变更** | 会让所有已产出讲座的 WARN 结果失效 → 变更后**全课程重跑** `validate.py` |
 | 讲座编号 / slug 分配 | 多路并行下唯一性靠事前分配，不能靠事后查重 |
+| 论文 `translation` 的开工 | 前置是该篇 ②Q 的结论（`verified` + `allows_translation` 两个 true）；闸门不成立时**只能写 `guide`** |
+| `papers.toml` 里论文 `key` 的分配 | `key` 同时是目录名 `content/papers/<key>/` 与站点 URL `site/papers/<key>/`，事后改 = 改 URL（同「讲座编号 / slug 分配」） |
 | `validate.py` → 复核 → `build.py` | 顺序不可颠倒：没校验的稿子复核是浪费 |
 | `build.py` 与发布 | 构建产物是全局的 |
 
@@ -644,17 +986,48 @@ python scripts/build.py --out site
 python scripts/build.py --out site --base-url /<repo>/
 ```
 
+### 13.1 每篇论文一页的速查
+
+```bash
+# 1. 登记（先做，否则论文页的 paper 字段必然 ERROR）
+#    在 papers.toml 里加 [[paper]]：key 用小写连字符，authors 是非空数组
+#    [paper.license] 先一律 false —— 别猜
+
+# 2. 逐篇核实授权（人工，无脚本）—— 四步见 §3 的 ②Q
+#    抓原始 HTML → 看出版社政策 → 记录 evidence_url + checked_at
+#    结论一行落到 docs/paper-licensing.md
+
+# 3. 建目录（没有骨架脚本，手工建，见 §14-15）
+#    content/papers/<key>/index.md
+
+# 4. 写稿：默认写导读（guide）；front matter 5 字段
+#    kind = "paper" / paper = "<key>" / title / status = "draft" / output_mode
+#    translation 只在前置「两个 true + 证据三件套」都成立时才写
+
+# 5. 校验（同一脚本；论文相关 ERROR 见 §6 的 8–11）
+python scripts/validate.py          # 0=通过 1=有ERROR 2=用法/IO错误
+
+# 6. 本地看授权提示条与元数据
+python scripts/build.py --out site
+#    → site/papers/<key>/index.html
+
+# 7. 复核通过后把 status 推到 reviewed / approved
+#    translation 必须双人：授权复核人 ≠ 译者
+```
+
 ---
 
 ## 14. 待决事项（spec 缺口）
 
 > 以下都是**冻结契约未定义**、而执行中确实会撞到的问题。**在 spec 补齐之前，按「本手册的临时约定」执行，并保持与 spec 不冲突**；不要在多处各自发明不同做法。
 >
-> **已由 spec 更新消化的两项**（曾在本节，现已写入契约，不再列为缺口）：
+> **已由 spec 更新消化的三项**（曾在本节，现已写入契约，不再列为缺口）：
 > - ~~`[license]` 只有一个 `verified` 布尔，无法表达「笔记已授权、视频未授权」~~ → spec §2 已新增 **`[license.materials]`**，按 `source_kind` 逐项核实，且「一旦存在 `materials`，闸门只认它，不再看 `verified`」。本手册 §3 已按此更新。
 > - ~~多词术语的 key 派生规则未定义~~ → spec §3 已明确 **key 推导规则**，并允许显式 `key = "..."` 覆盖。本手册 §4 已按此更新。
+> - ~~空课程仓库「没有任何讲座」是否算 ERROR~~ → spec §6.6 已明确：**`content/` 下既没有讲座也没有论文页 → ERROR**。本手册 §2 与 §14-10 已按此更新。
 >
-> **下表第 9–13 项**是**对照当前实现（`template/scripts/`）核对后发现的 spec 缺口或分歧** —— 实现可能仍在演进，遇到不一致时**以 spec 为准并回报**。
+> **下表第 9–19 项**是**对照当前实现（`template/scripts/`）核对后发现的 spec 缺口或分歧** —— 实现可能仍在演进，遇到不一致时**以 spec 为准并回报**。
+> **第 14–19 项是论文轨道引入的新缺口**（spec §10 已冻结论文契约，但下表的这些边角没有定义）。
 
 | # | 缺口 | 影响 | 临时约定 |
 | --- | --- | --- | --- |
@@ -667,7 +1040,13 @@ python scripts/build.py --out site --base-url /<repo>/
 | 7 | 目录名 `content/<NN>-<slug>/` 与 front matter `slug` 的**一致性未被校验**（§6.3 只查 slug 唯一） | 目录名与 slug 不一致时站点 URL 与目录错位 | 人工检查：目录名 `<NN>` 用两位补零，`<slug>` 与 front matter 完全相同 |
 | 8 | `course-diagram` 的**产出契约未定义**（SVG 尺寸 / 命名 / alt 文本 / 是否内联） | 配图风格与可访问性靠自觉 | 图放 `content/<NN>-<slug>/figures/<slug>-<n>.svg`；正文用 `![<中文说明>](figures/...)`，alt 文本必须写 |
 | 9 | **同一实现的多个 CLI / 字段超出冻结 spec** | 契约与实现漂移，消费方按 spec 写会失败或按实现写会与 spec 冲突 | 已观察到的分歧：① `validate.py` 有 `--root` / `--quiet`；② `build.py` 有 `--root`，且 `--base-url` 默认 `"./"` 而 spec §7 写 `/`；③ `validate.py` 实际要求 `[course]` 多填 `institution` / `source_language` / `target_language`（spec §2 只标 3 个必填）；④ `source_kind` 实际接受 `slides`（spec §4 只有 4 个值，且新增的 `[license.materials]` 也按这 4 类匹配，`slides` 永不匹配）；⑤ `source_title` 实际不是必填。**本手册一律按 spec 写**；分歧请回报给脚本维护者，由 spec 定夺 |
-| 10 | **`content/` 下没有任何讲座时 `validate.py` 报 ERROR** | 新生成的空课程仓库跑校验会 exit 1，容易被误判为配置错误 | 阶段 ① 只要求「除『没有任何讲座』外无其他 ERROR」；建好第一讲骨架后再跑一次应当 exit 0。**建议 spec §6 明确这一条**（要么列入 ERROR，要么允许空课程） |
+| 10 | ~~**`content/` 下没有任何讲座时 `validate.py` 报 ERROR**~~ → **spec §6.6 已明确这一条**（讲座与论文页**都没有**才算 ERROR） | 新生成的空课程仓库跑校验仍会 exit 1（这是刻意设计），容易被误判成配置错误；报错文案是「没有任何内容」，别拿它当「讲座缺失」来解 | 阶段 ① 只要求「除『没有任何内容』外无其他 ERROR」；建好**第一讲骨架或第一篇论文页**后再跑一次应当 exit 0 |
 | 11 | `build.py` 对 `status = "draft"` 的讲座**是否发布**未定义（§6 WARN 8 只说会标注「草稿」） | 可能把草稿推到线上 | **发布闸门靠人工**：只发布 `approved` 的讲座，不依赖 `build.py` 过滤 |
 | 12 | **spec §6.2 的措辞未与 §2 的 `[license.materials]` 同步**：§6.2 仍写「`license.verified != true` → ERROR」，而 §2 规定「存在 `materials` 时只认 `materials`，不看 `verified`」 | 只读 §6 的人会误以为 `verified` 是唯一闸门，可能据此把 `verified = true` 当成万能开关 | 以 §2 的判定顺序为准：**有 `materials` 就只认 `materials[source_kind]`**；建议把 §6.2 改写成引用 §2 的 `license_allows()` |
 | 13 | spec §9 规定首批 **5** 个 skill（含 `course-diagram`），但本手册只覆盖 4 个（`course-diagram` 由其他产出负责） | 交叉引用可能指向尚不存在的 skill | `course-explain` 中「交给 `course-diagram`」的引用在 `skills/course-diagram/SKILL.md` 落地前，暂时手绘 SVG 按 §14-8 的约定存放 |
+| 14 | spec §9 的 skill 清单仍是 **5 个**，**未包含论文技能** | `skills/` 现在有 6 个（新增 `course-paper`），与 spec §9 的清单不一致；`template/README.md` 已经引用 `course-paper` | 按本手册与 [skills/README.md](../skills/README.md) 执行：论文相关动作交给 `course-paper`。建议 spec §9 把清单更新为 6 个，并在 §10 末尾引用它 |
+| 15 | **没有论文页骨架脚本**：`new_lecture.py` 只生成讲座（spec §1 也只列了它），论文页的目录与 front matter 要**手工建** | 手工建最容易漏 `kind = "paper"`、或把 `paper` 的 key 拼错 —— 这两条都直接 ERROR | 按 §5「论文产出」第 3 步的模板逐字填，建完立刻跑 `validate.py`。若将来加脚本（或给 `new_lecture.py` 加论文模式），参数同样必须先写进 spec 再实现 |
+| 16 | 论文页 `status = "draft"` 的**标记口径**：`build.py` 在**侧栏导航**里给 `output_mode = "guide"` 的论文打「导读」标签（复用了 `draft` 这个 CSS 类），而「草稿」提示只在**论文页正文**里按 `status` 显示 | 只看导航会以为「导读」= 已复核状态；反过来 `translation` 的草稿在导航里**没有任何标记** | 发布闸门**不依赖导航标记**：只发布 `status = "approved"` 的论文页（与讲座同口径，见 §14-11）；导航里的「导读 / 全文翻译」只当**档位**提示看 |
+| 17 | 论文页配图的**命名与尺寸契约未定义**（spec §1 只给了 `content/papers/<key>/figures/*.svg`） | 图会各写各的名字，正文引用也不统一 | 沿用讲座的约定（§14-8）：`figures/<key>-<n>.svg`，`n` 从 1 递增、本篇内唯一；正文用**相对路径**引用，alt 必须写中文结论；画图走 `course-diagram` |
+| 18 | **机器兜底识别不了译文**：转载探测只在「几乎全为 ASCII 且 > 400 字符」时报警，而合规译文本来就是中文；spec §6 也没有任何针对译文的检查项 | 「校验通过」被误当成「译文安全」—— 没授权但译成中文的稿子同样能过 `validate.py` | `translation` 的唯一防线是 ②Q 的逐篇授权闸门 + ⑥P 的加严复核清单（译者与授权复核人分离、抽 3 处逐句对照）。**不要因为 exit 0 就认为译文可以发** |
+| 19 | 没有 `site/papers/index.html` **论文索引页**（spec §10.5 只说首页加「经典论文」列表 + 侧栏「论文」分组） | 论文多了以后首页列表会很长，且没有可分页/可筛选的入口 | 按 spec 现状执行（首页列表 + 侧栏分组）；确实需要独立索引页时，**先提 spec 扩展再实现** |

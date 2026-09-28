@@ -36,6 +36,7 @@ content/
     figures/*.svg
 scripts/
   new_lecture.py          新建讲座骨架
+  new_paper.py            新建论文页（**须先在 papers.toml 登记**，见 §10）
   validate.py             校验（CI 强制）
   build.py                构建静态站 → site/
 .github/workflows/        校验 + 部署（随模板一起复制）
@@ -179,6 +180,12 @@ output_mode = "explanation"       # explanation | transcript
 12. glossary 的 `en` 原词在正文出现但未加 `[[term:]]` 标记。
 13. `status = "draft"` 的内容在 `build` 时会标注「草稿」。
 
+> ⚠️ **机器拦不住译文。** 检查项 7 的原文转载探测针对的是「英文原文」——
+> 它靠 ASCII 占比与空格密度识别。一篇**全中文的翻译**不会触发它，因为译文里没有英文。
+> 也就是说：`translation` 模式在机器层面**只有授权闸门**这一道保护，
+> 没有任何自动手段能判断「这段中文是翻译还是原创」。
+> 这正是授权闸门必须硬、以及人工复核不可省的原因。见 [paper-licensing.md](./paper-licensing.md) §3。
+
 ## 7. `scripts/build.py` 契约
 
 ```
@@ -223,7 +230,7 @@ description: <一句话说明能力 + 何时使用（英文，供模型路由）
 ---
 ```
 
-首批 5 个：`course-init` / `course-translate` / `course-explain` / `course-diagram` / `course-validate-publish`。
+首批 6 个：`course-init` / `course-translate` / `course-explain` / `course-diagram` / `course-paper` / `course-validate-publish`。
 
 ---
 
@@ -294,7 +301,15 @@ output_mode = "guide"             # guide | translation
 → 校验通过后在页面上做交叉链接。这让「第 1 讲读 MapReduce」这种关系成为结构化数据，
 而不是散落在正文里的一句话。
 
-### 10.5 build 输出
+### 10.5 脚手架与 build 输出
+
+```bash
+python scripts/new_paper.py --key mapreduce --title "MapReduce 导读" --mode guide
+```
+
+`new_paper.py` **要求该 key 已在 `papers.toml` 中登记**，且 `--mode translation` 时
+会先检查 `verified` 与 `allows_translation` 均为 true —— **顺序不能反**：
+先写稿后补授权，等于把「未授权就翻译」变成既成事实。
 
 论文页输出到 `site/papers/<key>/index.html`（相对根目录两层，故 `base="../../"`），
 侧栏出现「论文」分组。首页在讲座列表下方增加「经典论文」列表。

@@ -24,7 +24,13 @@
 - [x] **发布流水线**：GitHub Pages + 三个工作流（校验 / 部署 / 链接巡检）
       —— 决策记录见 [publishing.md](./docs/publishing.md)
 - [x] **配图规范** [diagram-conventions.md](./docs/diagram-conventions.md) + 合规示例图
+- [x] **论文作为一等公民** —— 经典课程围绕经典论文展开，而论文授权与课程无关、通常更严：
+      `papers.toml` **逐篇**核实，产出分「导读」（无闸门）与「全文翻译」（须
+      `verified` **且** `allows_translation`）两档。见 [paper-licensing.md](./docs/paper-licensing.md) 与 spec §10。
+      ⚠️ 已核实：**目前没有任何一篇论文获得翻译授权**，ACM 论文需走 `permissions@acm.org`。
 - [ ] 把 `svg-diagram` 的房规 linter 纳入 CI（需先确定 LICENSE 与是否 vendor）
+- [ ] `site/papers/index.html` 论文索引页（当前靠首页列表代替）
+- [ ] 论文配图的命名与尺寸契约（spec §10 目前未定义）
 
 **授权（曾经阻塞，现已核实完毕 —— 结论不乐观，但明确）**
 

@@ -328,7 +328,7 @@ def nav_for(lectures: list[dict], papers: list[dict], current: str | None, base:
             key = str(paper.get("paper", ""))
             cls = ' class="active"' if current == key else ""
             mode = paper.get("output_mode")
-            tag = ' <span class="draft">导读</span>' if mode == "guide" else ""
+            tag = ' <span class="mode">导读</span>' if mode == "guide" else ""
             pitems.append(
                 f'<li{cls}><a href="{base}papers/{key}/index.html">'
                 f'{html.escape(str(paper.get("title", "")))}</a>{tag}</li>'
@@ -378,6 +378,7 @@ body {
 .sidebar a:hover { background: var(--sidebar-bg); color: var(--primary); }
 .sidebar li.active a, .sidebar li.active span { color: var(--primary); font-weight: 600; }
 .draft { font-size: .7rem; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 .35rem; margin-left: .3rem; }
+.mode { font-size: .7rem; color: var(--primary); border: 1px solid var(--primary); border-radius: 999px; padding: 0 .35rem; margin-left: .3rem; }
 .content { flex: 1 1 auto; min-width: 0; max-width: var(--max); }
 .content h1 { font-size: 1.85rem; line-height: 1.35; margin: 0 0 .4rem; }
 .content h2 { font-size: 1.32rem; margin: 2.4rem 0 .7rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border); }
@@ -554,7 +555,7 @@ def main(argv: list[str] | None = None) -> int:
     plis = "".join(
         f'<li><a href="{base}papers/{paper.get("paper")}/index.html">'
         f'{html.escape(str(paper.get("title", "")))}</a>'
-        + (' <span class="draft">导读</span>' if paper.get("output_mode") == "guide" else "")
+        + (' <span class="mode">导读</span>' if paper.get("output_mode") == "guide" else "")
         + "</li>"
         for paper in sorted(paper_pages, key=lambda x: str(x.get("title", "")))
     )
