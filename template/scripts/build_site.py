@@ -61,6 +61,20 @@ def licence_sentence(lic: dict) -> str:
     return "上游许可：" + "".join(x[len("上游许可："):] if x.startswith("上游许可：") else x for x in parts) + "\n\n"
 
 
+def yq(s) -> str:
+    """把任意字符串变成**合法的 YAML 双引号标量**。
+
+    JSON 是 YAML 1.2 的子集，所以 json.dumps 的转义对 YAML 合法。
+    只用标准库，不引入 PyYAML —— build_site.py 至今是零第三方依赖。
+
+    ★ 为什么必须有它：课程标题来自上游，我们无权改（改了就是误写官方名称）。
+    CS168 的官方标题逐字含 ": "，不加引号会让 mkdocs 直接解析失败。
+    同类字符：`: ` ` #`、行首的 `* & ! | > % @ ` `。
+    """
+    import json
+    return json.dumps(str(s), ensure_ascii=False)
+
+
 TERM_RE = re.compile(r"\[\[term:([A-Za-z0-9_.\-]+)\]\]")
 H1_RE = re.compile(r"^#\s+", re.M)
 
@@ -311,11 +325,11 @@ def main(argv: list[str] | None = None) -> int:
     nav = ["- 首页: index.md"]
     nav.append("- 讲座:")
     for n, title, slug in lectures:
-        nav.append(f"    - 第 {n} 讲 · {title}: lectures/{slug}.md")
+        nav.append(f"    - {yq(f'第 {n} 讲 · {title}')}: lectures/{slug}.md")
     if paper_pages:
         nav.append("- 论文导读:")
         for key, title in paper_pages:
-            nav.append(f"    - {title}: papers/{key}.md")
+            nav.append(f"    - {yq(title)}: papers/{key}.md")
     nav.append("- 术语表: glossary.md")
 
     # 站点身份取自 course.toml 的 [site]（复制模板后必须改那里），
@@ -324,18 +338,18 @@ def main(argv: list[str] | None = None) -> int:
     repo_full = str(site_cfg.get("repo", "")).strip() or "courselingo/courselingo"
     site_url = str(site_cfg.get("url", "")).strip()
 
-    cfg_yml = f"""site_name: {site_title}
+    cfg_yml = f"""site_name: {yq(site_title)}
 # 右上角显示本课程的仓库。repo_name 会显示在图标旁（宽屏）。
 # 带上组织名，让 CourseLingo 的归属一眼可见。
-repo_url: https://github.com/{repo_full}
-repo_name: {repo_full}
+repo_url: {yq("https://github.com/" + repo_full)}
+repo_name: {yq(repo_full)}
 # 站点规范地址：项目站点必须带 /<repo>/ 前缀，否则 canonical 与 sitemap 会错，
 # MkDocs 也会给出「site_url 未设置」的提示。
-site_url: {site_url or f"https://courselingo.github.io/{repo_full.split('/')[-1]}/"}
+site_url: {yq(site_url or f"https://courselingo.github.io/{repo_full.split(chr(47))[-1]}/")}
 # 本站的 docs/ 是 build_site.py **生成**的，不是源文件 ——
 # 默认的「编辑此页」会指向生成物，所以关掉，避免误导贡献者。
 edit_uri: ""
-site_description: {course.get('title', '')} — CourseLingo 中文讲解
+site_description: {yq(f"{course.get('title', '')} — CourseLingo 中文讲解")}
 docs_dir: {docs.as_posix()}
 site_dir: {(root / args.out).as_posix()}
 use_directory_urls: false
