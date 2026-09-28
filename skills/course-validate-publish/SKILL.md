@@ -15,7 +15,8 @@ python scripts/build.py --out site
 **不要使用 spec 未定义的参数。** `build.py` 只定义了 `--out`（默认 `site`）与 `--base-url`（默认 `/`）。
 
 > ⚠️ **实现与 spec 的分歧**：当前 `template/scripts/` 的实现**另有** `--root`（`validate.py` / `build.py`）、`--quiet`（`validate.py`），且 `build.py` 的 `--base-url` 默认是 `"./"` 而非 spec §7 写的 `"/"`。
-> 这些**都不在冻结契约里** —— 本 skill 只使用 spec 定义的用法；发现分歧请回报给脚本维护者（`docs/SOP.md` §14-11）。
+> 这些**都不在冻结契约里** —— 本 skill 只使用 spec 定义的用法；发现分歧请回报给脚本维护者（`docs/SOP.md` §14-9）。
+
 `new_course.py` / `new_lecture.py` 的 CLI 在 spec 中未定义 —— 不要臆造参数（见 `docs/SOP.md` §14-1）。
 
 零依赖：Python 3.11+ 标准库即可（`tomllib` 内置），**不需要** `npm install` / `pip install`。
@@ -45,19 +46,19 @@ CI 行为（spec §8）：`validate.yml` 在 push / PR 时跑，有 ERROR 即失
 
 | # | ERROR | 根因 | 修法 |
 | --- | --- | --- | --- |
-| 1 | `course.toml` 不可解析，或缺 `[course]` 必填字段 | 缺 `id` / `title` / `title_zh`；TOML 引号或段落写错 | 补齐 `id` / `title` / `title_zh`；检查 TOML 语法（`[course]` 段名、`= "…"` 引号、不要中文引号）。注意**当前实现还要求** `institution` / `source_language` / `target_language` 非空（spec §2 只标 3 个必填，见 `docs/SOP.md` §14-11） |
-| 2 | 存在 `output_mode = "transcript"` 的讲座，而 `license.verified != true` | 有人在未授权时做了逐字稿 | **默认改回 `"explanation"`**。只有拿到**该材料类型**的书面授权、并把 `[license]` 证据补齐（`terms` / `evidence_url` / `checked_at` / `allows_derivatives`）后，才允许把 `verified` 改成 `true`。**绝对不要为了过校验而改 `verified`** |
+| 1 | `course.toml` 不可解析，或缺 `[course]` 必填字段 | 缺 `id` / `title` / `title_zh`；TOML 引号或段落写错 | 补齐 `id` / `title` / `title_zh`；检查 TOML 语法（`[course]` 段名、`= "…"` 引号、不要中文引号）。注意**当前实现还要求** `institution` / `source_language` / `target_language` 非空（spec §2 只标 3 个必填，见 `docs/SOP.md` §14-9） |
+| 2 | 存在 `output_mode = "transcript"` 的讲座，而该讲座的授权不为 `true` | 有人在未授权时做了逐字稿 | **默认改回 `"explanation"`**。闸门判定（spec §2）：**存在 `[license.materials]` 时只看 `materials[<该讲的 source_kind>]`，`verified` 被忽略**；否则退回 `verified`。要开启 `transcript`，须先拿到**该材料类型**的书面授权、补齐证据（`terms` / `evidence_url` / `checked_at` / `allows_derivatives`），再置 `true`。**绝对不要为了过校验而改授权字段**。另注意：作业答案**永久排除**，不是开关 |
 | 3 | front matter 必填字段缺 / `lecture` 或 `slug` 重复 / `source_url` 为空 | 手搓骨架、并行写多讲时编号撞车 | 补字段；`lecture` 重新编号（保持全课程唯一）；`slug` 改唯一；`source_url` 填**官方**地址。预防：开工前一人先分配编号表 |
-| 4 | `[[term:key]]` 的 key 不在 `glossary.toml` | 拼写错误；**多词术语漏了连字符**（写成 `[[term:leader election]]`）；或用了未登记的新术语 | 拼错 → 改正；多词 → 按 key 派生规则连字符化（`leader election` → `leader-election`，见 `docs/SOP.md` §14-10）；确实是新术语 → **回 `course-init` 走评审加词**，不要就地写中文替代词 |
+| 4 | `[[term:key]]` 的 key 不在 `glossary.toml` | 拼写错误；**多词术语漏了连字符**（写成 `[[term:leader election]]`）；或用了未登记的新术语 | 拼错 → 改正；多词 → 按 key 派生规则连字符化（`leader election` → `leader-election`，spec §3）；想展示标记写法本身时放进**行内 code** 或 **HTML 注释**（spec §5 不算引用）；确实是新术语 → **回 `course-init` 走评审加词**，不要就地写中文替代词 |
 | 5 | `glossary.toml` 中 `en` / `zh` 为空，或 `en` 重复 | 漏填；同一概念建了两个 key | 补空值；`en` 重复（**大小写不敏感**）→ 合并为一个条目，其余写进 `aliases` |
 | 6 | 正文有「几乎全为 ASCII 且长度 > 400 字符」的连续段落 | 整段照抄原文 | **删掉，重写成中文讲解**（精确判定口径见下） |
 
 **ERROR 6 的实际判定口径**（当前实现，spec §6.6 未写细节）：段落须同时满足 `长度 > 400 字符` 且 `ASCII 占比 ≥ 90%` 且 `空格数 ≥ 40`；
 判定前会**剥离行内代码、链接与 Markdown 标记**，并**跳过围栏代码块、标题行与表格行**。
-→ **成段的英文散文**（照抄原文的特征）会被拦下；代码块不会；长 URL 不会。所以「单块代码 ≤ 400 字符」是**可读性要求，不是校验要求**（见 `docs/SOP.md` §14-6）。
+→ **成段的英文散文**（照抄原文的特征）会被拦下；代码块不会；长 URL 不会。所以「单块代码 ≤ 400 字符」是**可读性要求，不是校验要求**（见 `docs/SOP.md` §14-5）。
 
 **另有一条 ERROR 不在 spec §6 的清单里**：`content/` 下**没有任何讲座**时，当前实现会报 ERROR。
-所以在**新建的空课程仓库**上跑校验会 exit 1 —— 那是预期的，不是配置错误。建好第一讲骨架后应当 exit 0（见 `docs/SOP.md` §14-12）。
+所以在**新建的空课程仓库**上跑校验会 exit 1 —— 那是预期的，不是配置错误。建好第一讲骨架后应当 exit 0（见 `docs/SOP.md` §14-10）。
 
 ### 1.4 WARN 的处理（两类，都要看）
 

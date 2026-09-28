@@ -66,6 +66,30 @@ python scripts/build.py --out site   # 构建静态站
 - 渲染时首现显示「领导者选举（leader election）」，之后只显示「领导者选举」
 - 引用不存在的 key 会被 `validate.py` 判为 ERROR
 
+## 配图
+
+图放在讲座目录的 `figures/` 下，用 Markdown 图片引用：
+
+```markdown
+![一句话说清「图里有什么 + 结论是什么」的中文 alt](figures/write-path.svg)
+```
+
+- 用**手绘 SVG + 中文标签**，不要 Mermaid —— 风格会飘。
+- 规范见 [配图规范](https://github.com/courselingo/courselingo/blob/main/docs/diagram-conventions.md)，
+  生成交给 `course-diagram` 技能。
+- 模板里的 `content/01-what-is-a-distributed-system/figures/write-path.svg`
+  是一张**已通过房规校验**的示例，可直接照着写。
+
+一致性目前靠规范与自检：`validate.py` **不校验 SVG**（`pipeline-spec.md` §6 里没有这一项）。
+如果你本机装了 `svg-diagram` 技能，可以手动跑它的 linter：
+
+```bash
+node ~/.agents/skills/svg-diagram/tools/svg-lint/bin/svg-lint.mjs content/*/figures/*.svg
+```
+
+> 预期会有 1 类警告：本项目的品牌色（如文字色 `#1f2937`）不在该 linter 的内置调色板里。
+> 这是可接受的 —— 品牌色优先，别为了消警告改掉自己的配色。
+
 ## 校验会拦下什么
 
 | 档位 | 检查 |

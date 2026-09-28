@@ -40,17 +40,21 @@ description: Produce one CourseLingo lecture's Chinese explanation end to end �
 
 从 `course.toml` 读 `[license].verified`：
 
-| `verified` | 本讲允许的 `output_mode` |
+| 授权状态 | 本讲允许的 `output_mode` |
 | --- | --- |
-| `false` | **只有 `"explanation"`** |
-| `true` | `"explanation"` 或 `"transcript"`，且仅限**已核实授权的那种材料**（`source_kind` 要对得上） |
+| 该讲 `source_kind` 对应项为 `false`（或 `verified = false` 且无 `materials`） | **只有 `"explanation"`** |
+| 对应项为 `true` | `"explanation"` 或 `"transcript"`，且仅限**已核实授权的那种材料**（`source_kind` 要对得上） |
 
-即便 `verified = true`：
+判定顺序（spec §2）：**若 `course.toml` 存在 `[license.materials]`，闸门只认 `materials[<本讲的 source_kind>]`，`verified` 被忽略**；否则退回 `verified`。
+
+> 所以 `source_kind` 不只是署名信息 —— **它决定查哪一项授权，填错就会拿到错误的结论。**
+
+即便某项已核实为 `true`：
 
 - 视频字幕翻译**仍默认关闭**（平台条款叠加）
 - 作业答案翻译**永久排除**
 
-> `validate.py` 会在 `transcript` + `verified != true` 时 **exit 1**。这是报警器，不是许可 ——
+> `validate.py` 会在「`transcript` + 该讲授权不为 `true`」时 **exit 1**。这是报警器，不是许可 ——
 > **不要为了绕过它去改 `verified`。** 改 `verified` 需要步骤见 `course-init` 的双人闸门。
 
 ## 步骤 2 · 确认讲座身份（先分配，再动手）
@@ -88,12 +92,12 @@ output_mode = "explanation"
 | `lecture` | 整数，**全课程唯一** |
 | `slug` | 字符串，**全课程唯一**；与目录名 `<NN>-<slug>` 的 slug 一致 |
 | `status` | 新写的**永远是 `"draft"`** |
-| `source_kind` | `notes` / `video` / `textbook` / `other`，如实填（当前实现还收 `slides`，spec 未定义，见 `docs/SOP.md` §14-11） |
+| `source_kind` | `notes` / `video` / `textbook` / `other`，如实填。它决定授权闸门查哪一项（spec §2）。（当前实现还收 `slides`，spec 未定义，见 `docs/SOP.md` §14-9） |
 | `source_url` | **必填非空**，官方地址（署名 + 可溯源） |
 | `source_title` | 原标题 |
 | `output_mode` | 与步骤 1 的结论一致 |
 
-多源讲座（笔记 + 视频 + 教材）默认只能填一个来源：填**主讲来源**，其余在正文「溯源」小节列出（spec 无多源字段，见 `docs/SOP.md` §14-7）。
+多源讲座（笔记 + 视频 + 教材）默认只能填一个来源：填**主讲来源**，其余在正文「溯源」小节列出（spec 无多源字段，见 `docs/SOP.md` §14-6）。
 
 ## 步骤 5 · 按术语表写正文
 
@@ -104,10 +108,10 @@ output_mode = "explanation"
    主从复制（primary-backup replication）的核心是 [[term:replication]] …
    ```
    渲染规则（spec §5）：首现显示「中文（English）」，后续只显示中文。
-2. **key 怎么算**：key 由 glossary 的 `en` 派生 —— **小写化、空格与下划线转连字符、去掉其他非 `[a-z0-9.-]` 字符**。
+2. **key 怎么算**：key 由 glossary 的 `en` 派生（spec §3）—— **转小写、空格与下划线转连字符、去掉其他非法字符**。
    `leader election` → `[[term:leader-election]]`；`primary-backup replication` → `[[term:primary-backup-replication]]`。
    **写成 `[[term:leader election]]`（带空格）会 ERROR：key 不存在。**
-   （spec §5 只给了单词示例，此派生规则见 `docs/SOP.md` §14-10。）
+   想展示「标记怎么写」本身时，放进**行内 code** 或 **HTML 注释** —— spec §5 明确这两种不算真实引用。
 3. **不要用中文替代词绕过标记**。写了「副本」却没打 `[[term:replication]]` → `validate.py` WARN 7（术语漂移前兆）。
 4. **不要直接写英文原词**代替标记。
 5. **同一个概念全篇同一个中文词** —— 以 `glossary.toml` 的 `zh` 为唯一来源。
@@ -126,7 +130,7 @@ output_mode = "explanation"
 
 - 每个代码块**关键行必须有中文注释**，解释「为什么这么写」，而不是整块照抄。
 - 代码块**保持短小**（单块 ≤ 400 字符），超长就拆分并用正文文字承接。
-  （当前实现的转载探测会跳过围栏代码块，所以这条是**可读性原则**，不是校验要求。详见 `docs/SOP.md` §14-6。）
+  （当前实现的转载探测会跳过围栏代码块，所以这条是**可读性原则**，不是校验要求。详见 `docs/SOP.md` §14-5。）
 
 ### 语气纪律（brand.md）
 

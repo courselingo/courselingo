@@ -10,7 +10,18 @@
 | 课程授权**尚未核实** | 见 [licensing-research-log.md](./licensing-research-log.md) | 默认产出 `explanation`；`transcript` 模式被**校验脚本硬拦截** |
 | 内容是全项目的核心资产 | 架构决策 | 内容用纯 Markdown + TOML，**与渲染器解耦**，将来可整体迁移到 VitePress / MkDocs 而无需改内容 |
 
-## 1. 课程仓库结构（由 `scripts/new_course.py` 生成）
+## 1. 仓库布局
+
+### 平台主仓库（`courselingo/courselingo`）
+
+```
+template/                  ★ 课程仓库模板（见下）
+scripts/new_course.py      ★ 由 template/ 生成新课程仓库（在平台根，不在课程仓库内）
+skills/                    Agent Skills
+docs/                      规范与手册
+```
+
+### 课程仓库（由 `scripts/new_course.py` 生成）
 
 ```
 course.toml               课程元数据 + 授权闸门
@@ -23,6 +34,7 @@ scripts/
   new_lecture.py          新建讲座骨架
   validate.py             校验（CI 强制）
   build.py                构建静态站 → site/
+.github/workflows/        校验 + 部署（随模板一起复制）
 site/                     构建产物（不入库）
 ```
 
@@ -33,11 +45,11 @@ site/                     构建产物（不入库）
 id = "mit-6.5840"                 # 必填，唯一
 title = "Distributed Systems"     # 必填
 title_zh = "分布式系统"            # 必填
-institution = "MIT"
-course_number = "6.5840 / 6.824"
-homepage = "https://pdos.csail.mit.edu/6.824/"
-source_language = "en"
-target_language = "zh"
+institution = "MIT"               # 必填（校验要求）
+course_number = "6.5840 / 6.824"  # 可选
+homepage = "https://pdos.csail.mit.edu/6.824/"   # 可选
+source_language = "en"            # 必填（校验要求）
+target_language = "zh"            # 必填（校验要求）
 
 [license]
 verified = false                  # ★ 授权闸门。false 时禁止 transcript 模式
@@ -105,9 +117,9 @@ title = "主从复制"
 lecture = 3                       # 必填，整数，全课程唯一
 slug = "primary-backup-replication"  # 必填，唯一
 status = "draft"                  # draft | reviewed | approved
-source_kind = "notes"             # notes | video | textbook | other
+source_kind = "notes"             # notes | video | textbook | slides | other
 source_url = "https://..."        # 必填（署名与可溯源）
-source_title = "Primary-Backup Replication"
+source_title = "Primary-Backup Replication"   # 可选，但强烈建议填
 output_mode = "explanation"       # explanation | transcript
 +++
 
@@ -136,23 +148,34 @@ output_mode = "explanation"       # explanation | transcript
 
 检查项（ERROR）：
 
-1. `course.toml` 可解析且 `[course]` 必填字段齐全。
-2. **授权闸门**：存在任一 `output_mode="transcript"` 的讲座，而 `license.verified != true` → ERROR。
+1. `course.toml` 可解析且 `[course]` 必填字段齐全；`[license.materials]` 的键必须是合法材料类型、值必须是布尔。
+2. **授权闸门**：`output_mode="transcript"` 的讲座必须通过 `license_allows(cfg, source_kind)`
+   —— 即 `[license.materials][<该讲座的 source_kind>] == true`；没有 `[license.materials]` 时退回
+   `[license].verified == true`。判定顺序见 §2。
 3. 讲座 front matter 必填字段齐全；`lecture` 与 `slug` 全课程唯一；`source_url` 非空。
 4. `[[term:key]]` 引用的 key 必须存在于 `glossary.toml`。
-5. `glossary.toml` 中 `en` / `zh` 非空且 `en` 唯一。
-6. **原文转载探测**：正文中出现「几乎全为 ASCII 且长度 > 400 字符」的连续段落 → ERROR（疑似整段照抄原文，违反内容策略）。
+5. `glossary.toml` 中 `en` / `zh` 非空且 `key` 唯一。
+6. `content/` 下没有任何讲座（`content/<slug>/index.md`）→ ERROR。
+   新建的课程仓库在写出第一讲之前会**故意**停在这里。
+7. **原文转载探测**：正文中出现疑似整段照抄英文原文的段落 → ERROR。
+   阈值：剥掉 Markdown 语法后 **> 400 字符** 且 **ASCII 占比 ≥ 90%** 且 **空格数 ≥ 40**
+   （最后一条是为了不把单个超长 URL 误判成散文）。
+   跳过：围栏代码块内部、标题行、表格行；行内 code 与链接会被剥除后再判定。
 
 检查项（WARN）：
 
-7. glossary 的 `en` 原词在正文出现但未加 `[[term:]]` 标记。
-8. `status = "draft"` 的讲座在 `build` 时会标注「草稿」。
+8. glossary 的 `en` 原词在正文出现但未加 `[[term:]]` 标记。
+9. `status = "draft"` 的讲座在 `build` 时会标注「草稿」。
 
 ## 7. `scripts/build.py` 契约
 
 ```
-python scripts/build.py [--out site] [--base-url /]
+python scripts/build.py  [--root .] [--out site] [--base-url ./]
+python scripts/validate.py [--root .] [--quiet]
 ```
+
+- `--base-url` 默认 `"./"`（本地直接打开 `site/index.html` 就能用）；
+  部署到 `https://<org>.github.io/<repo>/` 时传 `/<repo>/`。
 
 - 读取 `course.toml` / `glossary.toml` / `content/**/index.md`
 - Markdown 子集渲染（**必须**支持）：ATX 标题、段落、围栏代码块（含语言类名与 HTML 转义）、无序/有序列表、表格、引用块、水平线、链接、图片、行内 `` `code` `` / `**粗体**` / `*斜体*`

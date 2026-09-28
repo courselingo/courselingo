@@ -50,6 +50,7 @@ notes = "尚未核实。核实后请填写 terms / evidence_url / checked_at，�
 # 一旦这里写了值，授权闸门就只认它，不再看上面的 verified。
 [license.materials]
 notes = false
+slides = false
 video = false
 textbook = false
 other = false
@@ -96,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True, help="目标目录")
     parser.add_argument("--title", required=True, help="英文课程名")
     parser.add_argument("--title-zh", required=True, help="中文课程名")
-    parser.add_argument("--institution", default="", help="学校 / 机构")
+    parser.add_argument("--institution", required=True, help="学校 / 机构（必填，课程出处）")
     parser.add_argument("--course-number", default="", help="课程编号")
     parser.add_argument("--homepage", default="", help="课程主页")
     parser.add_argument("--keep-demo", action="store_true", help="保留模板的演示讲座")

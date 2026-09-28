@@ -29,6 +29,7 @@ notes = "模板自带的演示课程，未对应任何真实课程。真实课�
 # 一旦这里写了值，授权闸门就只认它，不再看上面的 verified。
 [license.materials]
 notes = false
+slides = false
 video = false
 textbook = false
 other = false

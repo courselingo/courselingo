@@ -54,6 +54,17 @@ def split_front_matter(text: str) -> tuple[str, str]:
     return "", text
 
 
+def license_allows(cfg: dict, source_kind: str) -> bool:
+    """与 validate.py 同一套授权闸门判定（见 docs/pipeline-spec.md §2）。"""
+    lic = cfg.get("license")
+    if not isinstance(lic, dict):
+        return False
+    materials = lic.get("materials")
+    if isinstance(materials, dict) and materials:
+        return materials.get(source_kind) is True
+    return lic.get("verified") is True
+
+
 # --------------------------------------------------------------------------
 # 行内渲染
 # --------------------------------------------------------------------------
@@ -429,6 +440,22 @@ def main(argv: list[str] | None = None) -> int:
         fm = tomllib.loads(fm_text) if fm_text else {}
         lectures.append({**fm, "_path": p, "_body": body})
     lectures.sort(key=lambda x: x.get("lecture", 0))
+
+    # 发布前的第二道闸门：即便有人跳过 validate.py，build 也不会渲染未授权的逐字稿。
+    blocked = [
+        lec for lec in lectures
+        if lec.get("output_mode") == "transcript"
+        and not license_allows(cfg, str(lec.get("source_kind", "")))
+    ]
+    if blocked:
+        print("⛔ 构建中止：以下讲座是 transcript 模式，但对应材料的授权未核实。", file=sys.stderr)
+        for lec in blocked:
+            print(
+                f"   - {lec.get('slug')}  (source_kind={lec.get('source_kind')})",
+                file=sys.stderr,
+            )
+        print("   翻译完整逐字稿属于衍生作品，必须先核实授权。见 docs/content-policy.md", file=sys.stderr)
+        return 1
 
     if out_dir.exists():
         shutil.rmtree(out_dir)

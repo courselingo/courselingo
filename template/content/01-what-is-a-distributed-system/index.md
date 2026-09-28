@@ -61,7 +61,7 @@ def replicate(key, value, replicas):
 
 ## 一张图看懂写入路径
 
-![客户端向三个副本写入，需要等到多数派确认才算成功](figures/write-path.svg)
+![节点 A 与节点 B 已确认，节点 C 未响应；2/3 已确认即构成多数派](figures/write-path.svg)
 
 三个[[term:node]]里挂掉一个，剩下两个仍然构成多数派，写入依然可以成功 —— 这就是「多数派」这个设计的意义。
 

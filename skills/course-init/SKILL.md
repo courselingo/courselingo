@@ -72,6 +72,15 @@ allows_derivatives = false
 share_alike = false
 notes = ""
 
+# 可选但推荐：按材料类型逐项核实（「笔记已授权」不等于「视频也已授权」）。
+# 一旦存在 [license.materials]，闸门就只认它，不再看上面的 verified（spec §2）。
+# 没逐项核实过就【不要】加这个表 —— 别用一堆 false 假装核实过。
+# [license.materials]
+# notes = false
+# video = false
+# textbook = false
+# other = false
+
 [output]
 default_mode = "explanation"
 ```
@@ -82,14 +91,14 @@ default_mode = "explanation"
 - `[output].default_mode` 在步骤 4 出结论前**恒为 `explanation`**。
 - 缺 `id` / `title` / `title_zh` 任一 → `validate.py` exit 1。
 - **当前实现比 spec 更严**：`validate.py` 还要求 `institution` / `source_language` / `target_language` 非空（spec §2 只把前三个标为必填）。
-  所以**全部填上**，一次到位。详见 `docs/SOP.md` §14-11。
+  所以**全部填上**，一次到位。详见 `docs/SOP.md` §14-9。
 
 ```bash
 python scripts/validate.py    # 此时会报「没有任何讲座」→ exit 1，属预期（见下）
 ```
 
 ⚠️ **新建的空课程仓库还没有讲座，校验会因「没有任何讲座」而 exit 1 —— 这是预期的。**
-（spec §6 的 ERROR 清单里没有这一项；当前实现会这么报。详见 `docs/SOP.md` §14-12。）
+（spec §6 的 ERROR 清单里没有这一项；当前实现会这么报。详见 `docs/SOP.md` §14-10。）
 
 所以本步骤只要求：**除「没有任何讲座」之外没有其他 ERROR**（尤其是 `[course]` 必填字段相关的）。
 建好第一讲骨架（步骤 6）后再跑一次，那时应当 **exit 0**。
@@ -124,34 +133,53 @@ content-policy 要求**逐类型**确认，因为许可可能不同：
 | 位置 | 填什么 |
 | --- | --- |
 | `course.toml` `[license]` | `terms`（原文照抄的条款名）/ `evidence_url` / `checked_at`（ISO 日期）/ `allows_commercial` / `allows_derivatives` / `share_alike` / `notes` |
+| `course.toml` `[license.materials]` | **逐项核实过的**类型填 `true`（`notes` / `video` / `textbook` / `other`） |
 | `docs/course-catalog.md` | 《记录格式》表一行，含**原文引用**与访问日期 |
 | `docs/licensing-research-log.md` | 核实表对应的行 |
 
-### 4.4 `verified = true` 的四条前置（缺一不可）
+#### 授权闸门的判定顺序（spec §2）
+
+```
+1. 若 [license].materials 存在 → 只看 materials[该讲座的 source_kind] 是否为 true
+2. 否则                       → 退回 [license].verified
+```
+
+**一旦你填了 `[license.materials]`，闸门就只认它，`verified` 被忽略。**
+
+- 好处：能准确表达「笔记已授权、视频未授权」—— 许可常按材料类型不同。
+- 风险：**没逐项核实过就不要写 `materials`**，让它退回 `verified` 总开关。
+  **别顺手加一个全 `false` 的表**，那会让人以为已经逐项核实过，或把闸门莫名收紧。
+- ⚠️ **作业 / Lab 答案不属于这四个类型中的任何一个**：作业答案翻译是**永久排除项**，不是开关。不要塞进 `other`。
+
+### 4.4 `verified = true`（或 `materials[<kind>] = true`）的四条前置（缺一不可）
 
 - [ ] `terms` 非空，且是原文照抄
 - [ ] `evidence_url` 非空，且**复核者本人真的打开过**
 - [ ] `checked_at` 为 ISO 日期
 - [ ] `allows_derivatives` 已明确判断（翻译属于衍生作品）
 
+> 用 `materials` 时，四条前置**按类型分别满足**：`materials.video = true` 需要的是**视频**的条款证据，不能拿笔记的条款来顶。
+
 ### 4.5 闸门的后果
 
-| `verified` | 允许的 `output_mode` |
+| 授权状态 | 允许的 `output_mode` |
 | --- | --- |
-| `false` | **只有 `explanation`** —— 写我们自己的原创中文讲解 |
-| `true` | `explanation` 或 `transcript`（且仅限**已核实授权的那种材料**） |
+| 该项为 `false`（或 `verified = false` 且无 `materials`） | **只有 `explanation`** —— 写我们自己的原创中文讲解 |
+| 该项为 `true` | `explanation` 或 `transcript`，且仅限**已核实授权的那种材料** |
 
-即便 `verified = true`：
+即便某项已核实为 `true`：
 - **视频字幕翻译**仍默认关闭（平台条款叠加）
 - **作业答案翻译永久排除**
 
-`validate.py` 会在「存在 `transcript` 讲座 + `verified != true`」时 **exit 1**。这是**事后报警器**，不是流程的替代品 —— 被拦住意味着前面已经白做且产生了侵权风险。
+`validate.py` 会在「存在 `transcript` 讲座 + 该讲座 `source_kind` 对应的授权不为 `true`」时 **exit 1**。
+这是**事后报警器**，不是流程的替代品 —— 被拦住意味着前面已经白做且产生了侵权风险。
 
 ### 人工闸门（双人签字）
 
 - [ ] 证据由**第二人独立复核**（自己再看一遍不算复核）
 - [ ] 判定只依据 `evidence_url` 的原文，不依据「大家都这么用」
-- [ ] 分清材料类型；部分材料未核实 → `verified = false`
+- [ ] **按类型分别签字**：`materials.notes = true` 推不出视频也能用
+- [ ] 分清材料类型；部分材料未核实 → 该项为 `false`
 - [ ] 未核实 → 结论就是 `false`，**照常开工讲解，不照常开工翻译**
 
 ---
@@ -179,17 +207,21 @@ notes = "此处指数据副本机制"
 
 ### 标记 key 怎么来（写正文时最容易错的一处）
 
-spec §5 只给了单词示例 `[[term:replication]]`，**没有定义多词术语的 key 派生规则**。
-当前实现的规则：**key = `en` 小写化、空白与下划线转连字符、去掉其他非 `[a-z0-9.-]` 字符**。
+spec §3 定义了 key 推导规则：**`key` 默认由 `en` 生成 —— 转小写、空格与下划线转连字符、去掉其他非法字符**。
+正文标记必须用 **key**，不是 `en` 原文。
 
 | `en` | 正文里必须写 |
 | --- | --- |
 | `replication` | `[[term:replication]]` |
 | `leader election` | `[[term:leader-election]]` |
 
-**所以 `en` 里不要写括号、斜杠、逗号** —— 它们会在派生时被删掉，导致作者和术语表对不上。
+`en` 里不要写**括号、斜杠、逗号** —— 它们会在派生时被去掉，导致作者按 `en` 猜的 key 和实际 key 对不上。
 正文写 `[[term:leader election]]`（带空格）会 ERROR：key 不存在。
-（当前实现还支持 spec §3 未定义的 `key = "..."` 覆盖字段 —— **不要用它**。详见 `docs/SOP.md` §14-10。）
+需要与 `en` 不同的 key 时，按 spec §3 显式写 `key = "..."`（可选字段，一般用不到）。
+同一课程内 **key 也必须唯一**（重复即 ERROR）。
+
+> 想展示「标记怎么写」时，把它放进**行内 code**（`` `[[term:key]]` ``）或 **HTML 注释**（`<!-- -->`）——
+> spec §5 明确这两种情况**不算真实引用**，不会被判 ERROR。
 
 译法决策：
 - 业界有通行译法 → **优先沿用**（`consensus` → 共识）
@@ -236,7 +268,7 @@ output_mode = "explanation"
 - 目录名 `<NN>-<slug>` 与 front matter `slug` 保持一致（spec 未校验此项，靠人工）
 - `slug` 只允许小写字母、数字与连字符（当前实现会校验格式）
 - `source_kind` 按 spec §4 只用 `notes` / `video` / `textbook` / `other`
-  （当前实现额外接受 `slides`，但 spec 未定义该值，见 `docs/SOP.md` §14-11）
+  （当前实现额外接受 `slides`，但 spec 未定义该值，见 `docs/SOP.md` §14-9）
 - `output_mode` 与步骤 4 的结论一致
 - 配图目录 `content/<NN>-<slug>/figures/`（需要图时走 `course-diagram`）
 
@@ -251,8 +283,9 @@ python scripts/validate.py
 - [ ] 课程已在 `docs/course-catalog.md` 登记，id / 中文名一致
 - [ ] `course.toml` 三个必填字段齐全，`default_mode = "explanation"`
 - [ ] `[license]` 每个字段都有据可依；无据则留空且 `verified = false`
+- [ ] 若逐项核实过，`[license.materials]` 与证据一致；**没核实过就别写这个表**
 - [ ] 证据落到了三处（toml / catalog / research-log），含原文引用与访问日期
-- [ ] `glossary.toml` 60–100 条，`en` 唯一，PR 中有冻结声明
+- [ ] `glossary.toml` 60–100 条，`en` 唯一、**key 唯一**，PR 中有冻结声明
 - [ ] 第一讲骨架存在，front matter 8 字段齐全，`lecture` / `slug` 唯一
 - [ ] `python scripts/validate.py` **exit 0**
 - [ ] **仓库里没有任何课程原料**（PDF / 视频 / 逐字稿 / 幻灯片）

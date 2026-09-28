@@ -69,7 +69,7 @@ python scripts/new_course.py --id mit-6.5840 --out ../courses/mit-6.5840 \
 ```
 默认会移除模板自带的演示讲座，得到干净的课程仓库；`--keep-demo` 保留演示内容（用于验证流水线）。
 
-> ⚠️ **执行位置注意**：spec §1 把 `new_course.py` 画在**课程仓库结构里**，而当前实现把它放在**平台主仓库**的 `scripts/` 下，并通过 `--out` 指定课程仓库位置。同时其 CLI 参数**不在冻结 spec 中**（见 §14-1、§14-11）。
+> ⚠️ **执行位置注意**：spec §1 把 `new_course.py` 画在**课程仓库结构里**，而当前实现把它放在**平台主仓库**的 `scripts/` 下，并通过 `--out` 指定课程仓库位置。同时其 CLI 参数**不在冻结 spec 中**（见 §14-1、§14-9）。
 > 若脚本行为与本节不符，按 spec §1 手工建目录、按 §2/§3/§4 手工写 `course.toml` / `glossary.toml` / `index.md`。
 
 ### 输出
@@ -81,7 +81,7 @@ scripts/         # new_lecture.py / validate.py / build.py
 ```
 
 必填字段（缺一个 → `validate.py` exit 1）。
-spec §2 只把 `id` / `title` / `title_zh` 标为必填；**当前实现要求更多**（见 §14-11）：
+spec §2 只把 `id` / `title` / `title_zh` 标为必填；**当前实现要求更多**（见 §14-9）：
 
 | 来源 | 必填字段 |
 | --- | --- |
@@ -103,6 +103,15 @@ allows_derivatives = false
 share_alike = false
 notes = ""
 
+# 可选但推荐：按材料类型逐项核实（「笔记已授权」不等于「视频也已授权」）。
+# 一旦存在 [license.materials]，授权闸门就只认它，不再看上面的 verified。
+# 没逐项核实过就【不要】加这个表 —— 别用一堆 false 假装核实过。
+# [license.materials]
+# notes = false
+# video = false
+# textbook = false
+# other = false
+
 [output]
 default_mode = "explanation"
 ```
@@ -114,7 +123,7 @@ python scripts/validate.py
 ```
 
 ⚠️ **此时还没有任何讲座，校验会报「没有任何讲座」而 exit 1 —— 这是预期的，不是配置错误。**
-（当前实现把「`content/` 下没有任何讲座」也当作 ERROR；spec §6 的 ERROR 清单里**没有**这一项，见 §14-12。）
+（当前实现把「`content/` 下没有任何讲座」也当作 ERROR；spec §6 的 ERROR 清单里**没有**这一项，见 §14-10。）
 
 因此阶段 ① 的验证方式改为：
 
@@ -141,35 +150,51 @@ python scripts/validate.py
 
 ### 动作
 1. **实际访问**官方页面，逐字摘录许可文本，记录访问日期。不可达就写「不可达」，**不得推断**。
-2. **按材料类型分别核实**（这是 content-policy 的要求，而 spec 的 `course.toml` 只有一个布尔，见 §14-4）：
-   - 讲座笔记 / 幻灯片
-   - 讲座视频（**许可可能与课件不同**，还叠加平台条款）
-   - 作业 / Lab 题面与答案
-   - 教材（如有，是独立作品）
+2. **按材料类型分别核实** —— 这是 content-policy 的要求，spec §2 已提供对应的表达方式 `[license.materials]`：
+   - `notes` —— 讲座笔记 / 幻灯片
+   - `video` —— 讲座视频（**许可可能与课件不同**，还叠加平台条款）
+   - `textbook` —— 教材（独立作品）
+   - `other` —— 其他
+   - ⚠️ **作业 / Lab 题面与答案不属于以上任何一项**：作业答案翻译是**永久排除项**，不是「核实了就能开」的开关（spec §2、content-policy）。不要把作业答案塞进 `other`。
 3. 把结论写回三处：
-   - `course.toml` 的 `[license]` 字段（`terms` / `evidence_url` / `checked_at` / `allows_commercial` / `allows_derivatives` / `share_alike` / `notes`）
+   - `course.toml` 的 `[license]` 字段（`terms` / `evidence_url` / `checked_at` / `allows_commercial` / `allows_derivatives` / `share_alike` / `notes`），并按类型填 `[license.materials]`
    - `docs/course-catalog.md` 的《记录格式》表（含原文引用与访问日期）
    - `docs/licensing-research-log.md` 的核实表
 
 `checked_at` 用 ISO 日期（如 `2026-02-14`）。
 
-### 输出
-- `[license]` 字段全部有据可依
-- 核实表一行，含**原文引用**
-- 明确结论：`verified` 是 `true` 还是 `false`
+#### 授权闸门的判定顺序（spec §2，`validate.py` 的 `license_allows()`）
 
-### `verified = true` 的四条前置（缺一不可）
+```
+1. 若 [license].materials 存在 → 只看 materials[该讲座的 source_kind] 是否为 true
+2. 否则                       → 退回 [license].verified
+```
+
+**一旦你填了 `[license.materials]`，闸门就只认它，`verified` 被忽略。** 两个后果必须记住：
+
+- 好处：能准确表达「笔记已授权、视频未授权」—— 这正是本项目最容易误解授权的地方。
+- 风险：**别顺手加一个全 `false` 的 `materials` 表**，那会在 `verified = true` 的情况下把闸门收紧到「什么都不许」，或让人以为已经逐项核实过。**没逐项核实就不要写 `materials`**，让它退回 `verified` 总开关。
+
+### 输出
+- `[license]` 字段全部有据可依；（若逐项核实过）`[license.materials]` 与之一致
+- 核实表一行，含**原文引用**
+- 明确结论：`verified` / `materials[<kind>]` 的取值各是什么
+
+### `verified = true`（或 `materials[<kind>] = true`）的四条前置（缺一不可）
 - [ ] `terms` 非空，且是**原文照抄**的条款名
 - [ ] `evidence_url` 非空，且**复核者本人真的打开过**
 - [ ] `checked_at` 为 ISO 日期
 - [ ] `allows_derivatives` 已明确判断（翻译属于衍生作品，这一项决定整门课能不能做）
 
+> 用 `materials` 时，这四条前置**按类型分别满足**：`materials.video = true` 需要的是**视频**的条款证据，不能拿笔记的条款来顶。
+
 ### 人工闸门 ②（双人签字）
 - [ ] 证据由**第二人独立复核**一次（自己看一遍不算复核）
-- [ ] `verified` 的判定**只依据 evidence_url 的原文**，不依据「大家都这么用」「MIT OCW 应该是 CC BY-NC-SA」
+- [ ] 判定**只依据 evidence_url 的原文**，不依据「大家都这么用」「MIT OCW 应该是 CC BY-NC-SA」
 - [ ] 特别注意两个陷阱：MIT OCW 的 **NC / SA** 条款极易记错；6.824 / 6.1810 的讲座笔记历史上**未声明许可** —— 未声明的法律状态是**保留所有权利**
-- [ ] 即便 `verified = true`：**视频字幕翻译**仍默认关闭（平台条款叠加）；**作业答案翻译永久排除**（著作权 + 学术诚信）
-- [ ] 未核实 → 结论就是 `verified = false`，全课程 `output_mode = "explanation"`，**照常开工讲解，不照常开工翻译**
+- [ ] **按类型分别签字**：`materials.notes = true` 只能说笔记可以用，**推不出**视频可以用
+- [ ] 即便某项已核实为 `true`：**视频字幕翻译**仍默认关闭（平台条款叠加）；**作业答案翻译永久排除**（著作权 + 学术诚信）
+- [ ] 未核实 → 该项保持 `false`，对应讲座一律 `output_mode = "explanation"`，**照常开工讲解，不照常开工翻译**
 
 ### 机器兜底
 ```bash
@@ -203,18 +228,20 @@ python scripts/validate.py
 [[term]]
 en = "replication"
 zh = "副本"
+# key = "replication"          # 可选；默认由 en 推导，一般不用写
 aliases = ["replica", "replicas"]
 notes = "此处指数据副本机制"
 ```
 - `en` / `zh` 必填且非空
-- `en` 唯一（**大小写不敏感**去重）
+- `en` 唯一（**大小写不敏感**去重）；**key 也必须在课程内唯一**（重复即 ERROR）
+- `key` 可选，默认由 `en` 推导；需要与 `en` 不同的 key 时才显式写
 - `aliases` 收异体/复数
 - `notes` 只在有歧义时写
 
 #### 标记 key 怎么来（★ 写正文时最容易错的一处）
 
-spec §5 只给了单词示例 `[[term:replication]]`，**没有定义多词术语的 key 派生规则**（见 §14-10）。
-当前实现的规则是：**key = `en` 小写化、空白与下划线转连字符、去掉其他非 `[a-z0-9.-]` 字符**。
+spec §3 定义了 key 推导规则：**`key` 默认由 `en` 生成 —— 转小写、空格与下划线转连字符、去掉其他非法字符**。
+正文标记必须用 **key**，不是 `en` 原文。
 
 | `en` | 正文里必须写的标记 |
 | --- | --- |
@@ -222,9 +249,12 @@ spec §5 只给了单词示例 `[[term:replication]]`，**没有定义多词术�
 | `leader election` | `[[term:leader-election]]` |
 | `primary-backup replication` | `[[term:primary-backup-replication]]` |
 
-**写成 `[[term:leader election]]`（带空格）会 ERROR：key 不存在。** 正文匹配时 key 按小写比对，所以 `[[term:Leader-Election]]` 能通过，但**统一写小写**。
+**写成 `[[term:leader election]]`（带空格）会 ERROR：key 不存在。** 统一写小写。
+需要在正文里写「标记写法示例」本身时，把它放进**行内 code**（`` `[[term:key]]` ``）或 **HTML 注释**（`<!-- -->`）——
+spec §5 明确这两种情况**不算真实引用**，不会被判 ERROR。
 
-> 当前实现还允许在 `[[term]]` 里显式写一个 spec §3 未定义的 `key = "..."` 字段来覆盖派生结果 —— **不要用它**（不在冻结契约内，见 §14-10）。
+> `en` 里尽量别写括号、斜杠、逗号：它们会在派生时被去掉，导致你按 `en` 猜的 key 和实际 key 对不上。
+> 真需要特殊 key 时，按 spec §3 显式写 `key = "..."`。
 
 规模基线：首门课首版 **60–100 条**（ROADMAP Phase 1），至少覆盖前 3 讲。
 
@@ -242,7 +272,7 @@ spec §5 只给了单词示例 `[[term:replication]]`，**没有定义多词术�
 - [ ] 每条术语都是**真的术语**，不是普通词（不要把 `the`、`system` 收进来）
 - [ ] 分歧清单（拿不准的 5 条）已逐条给出候选译法与理由，并由**两名维护者**确认
 - [ ] `python scripts/validate.py` **exit 0**
-- [ ] 在 PR 描述中写明 **「glossary frozen @ `<commit short sha>`」**（冻结声明，见 §14-5：spec 没有专门的冻结字段）
+- [ ] 在 PR 描述中写明 **「glossary frozen @ `<commit short sha>`」**（冻结声明，见 §14-4：spec 没有专门的冻结字段）
 
 ### 冻结的纪律
 冻结之后：
@@ -285,12 +315,12 @@ output_mode = "explanation"
 | 字段 | 值域 | 注意 |
 | --- | --- | --- |
 | `lecture` | 整数 | **全课程唯一** |
-| `slug` | 字符串 | **全课程唯一**；与目录名 `<NN>-<slug>` 的 slug 一致（见 §14-8） |
+| `slug` | 字符串 | **全课程唯一**；与目录名 `<NN>-<slug>` 的 slug 一致（见 §14-7） |
 | `status` | `draft` / `reviewed` / `approved` | 新写的永远是 `draft` |
-| `source_kind` | spec §4：`notes` / `video` / `textbook` / `other` | 如实填。注意当前实现额外接受 `slides`（spec 未定义，见 §14-11）；**按 spec 只用这四个值** |
+| `source_kind` | spec §4：`notes` / `video` / `textbook` / `other` | 如实填。**它还决定授权闸门查哪一项** —— 填错 `source_kind` 会拿到错误的授权结论（spec §2）。注意当前实现额外接受 `slides`（spec 未定义，见 §14-9），而 `[license.materials]` 只认上面四类；**按 spec 只用这四个值** |
 | `output_mode` | `explanation` / `transcript` | **`verified = false` 时只能是 `explanation`** |
 
-> `source_title` 在 spec §4 的示例里存在，但**当前实现不把它列为必填**（见 §14-11）。仍然建议填 —— 它是署名与可溯源的一部分。
+> `source_title` 在 spec §4 的示例里存在，但**当前实现不把它列为必填**（见 §14-9）。仍然建议填 —— 它是署名与可溯源的一部分。
 
 配图放 `content/<NN>-<slug>/figures/*.svg`，正文用 `![说明](figures/xxx.svg)` 引用；需要画图时走 `course-diagram` skill。
 
@@ -343,7 +373,7 @@ python scripts/validate.py
 | 5 | glossary 的 `en` / `zh` 为空或 `en` 重复 | 补空值；`en` 重复 → 合并为一个条目，其余进 `aliases` |
 | 6 | 正文有「几乎全为 ASCII 且 > 400 字符」的连续段落 | 十有八九是照抄原文：**删掉重写成中文讲解** |
 
-**关于 ERROR 6 的判定口径**（当前实现，spec §6.6 未写细节，见 §14-6）：段落需同时满足
+**关于 ERROR 6 的判定口径**（当前实现，spec §6.6 未写细节，见 §14-5）：段落需同时满足
 `长度 > 400 字符` **且** `ASCII 占比 ≥ 90%` **且** `空格数 ≥ 40` 才算可疑；
 判定前会**剥离行内代码、链接与 Markdown 标记**，并且**跳过围栏代码块、标题行与表格行**。
 
@@ -443,11 +473,11 @@ site/assets/style.css
 先读：docs/pipeline-spec.md §3（字段契约）、docs/content-policy.md、.github/CONTRIBUTING.md §1。
 
 硬约束：
-1. 产出只能是 TOML 的 [[term]] 列表，字段仅限 en / zh / aliases / notes。不得新增字段（尤其不要写 key 字段）。
+1. 产出只能是 TOML 的 [[term]] 列表，字段仅限 en / zh / key / aliases / notes（spec §3）。不得新增其他字段。key 一般不用写 —— 它默认由 en 推导（小写、空格与下划线转连字符）。
 2. 术语来源只能是课程官方材料（大纲、讲座列表、页面标题）。不得凭记忆编造官方术语。
 3. 只输出术语条目，不得输出任何英文原文段落、幻灯片内容或视频内容。
 4. 业界有通行译法的优先沿用（consensus → 共识，replication → 副本）；无通行译法的保留英文并在 notes 写明「无通行译法，暂译 X」。
-5. 同一概念只能有一个 en；复数与异体写进 aliases。正文标记 key 由 en 派生（小写、空格转连字符：leader election → [[term:leader-election]]），所以 en 里不要用括号、斜杠等符号。
+5. 同一概念只能有一个 en；复数与异体写进 aliases。同一课程内 key 必须唯一。正文标记 key 由 en 派生（小写、空格转连字符：leader election → [[term:leader-election]]），所以 en 里不要用括号、斜杠等符号。
 
 执行步骤：
 1. 列出该课程的高频术语概念，目标 60–100 条，至少覆盖前 3 讲。
@@ -468,7 +498,7 @@ site/assets/style.css
 先读：glossary.toml（必须遵守）、本讲座骨架的 front matter、docs/content-policy.md、docs/brand.md。
 
 硬约束：
-1. 本课程 license.verified = <true|false>。为 false 时 output_mode 只能是 "explanation"：禁止逐句对照翻译，禁止在正文保留英文原句或整段英文。
+1. 本课程授权状态：license.verified = <true|false>，[license.materials] = <未填 / 各项取值>。为 false 时 output_mode 只能是 "explanation"：禁止逐句对照翻译，禁止在正文保留英文原句或整段英文。
 2. 术语：正文出现每个已冻结术语时，用 [[term:<key>]] 标记，key 由 glossary 的 en 派生（小写、空格转连字符，如 leader election → [[term:leader-election]]）；不要用中文替代词绕过标记，也不要直接写英文原词。
 3. 不转载：不得复制源材料的句子、幻灯片、图片、题面。用你自己的话讲。
 4. 每个代码块的关键行必须有中文注释；代码块保持短小（单块 ≤ 400 字符，超长就拆分并用正文文字承接）。
@@ -501,7 +531,7 @@ source_url = "<官方 URL>" / source_title = "<原标题>" / output_mode = "expl
 A 契约层
  1 front matter 8 字段齐全；lecture 与 slug 全课程唯一；source_url 非空
  2 output_mode 与 license.verified 不冲突
- 3 每个 [[term:key]] 的 key 都在 glossary 中存在（列出不存在的 key）
+ 3. 每个 [[term:key]] 的 key 都在 glossary 中存在（列出不存在的 key；注意多词术语要连字符化）
  4 正文出现的每个 glossary en 原词都已打标记（列出漏标的词与行号）
  5 无「几乎全为 ASCII 且 > 400 字符」的段落（列出可疑段落的首 40 字符与长度）
 
@@ -620,21 +650,24 @@ python scripts/build.py --out site --base-url /<repo>/
 
 > 以下都是**冻结契约未定义**、而执行中确实会撞到的问题。**在 spec 补齐之前，按「本手册的临时约定」执行，并保持与 spec 不冲突**；不要在多处各自发明不同做法。
 >
-> 第 10–14 项是**对照当前实现（`template/scripts/`）核对后发现的 spec 缺口或分歧** —— 实现可能仍在演进，遇到不一致时**以 spec 为准并回报**。
+> **已由 spec 更新消化的两项**（曾在本节，现已写入契约，不再列为缺口）：
+> - ~~`[license]` 只有一个 `verified` 布尔，无法表达「笔记已授权、视频未授权」~~ → spec §2 已新增 **`[license.materials]`**，按 `source_kind` 逐项核实，且「一旦存在 `materials`，闸门只认它，不再看 `verified`」。本手册 §3 已按此更新。
+> - ~~多词术语的 key 派生规则未定义~~ → spec §3 已明确 **key 推导规则**，并允许显式 `key = "..."` 覆盖。本手册 §4 已按此更新。
+>
+> **下表第 9–13 项**是**对照当前实现（`template/scripts/`）核对后发现的 spec 缺口或分歧** —— 实现可能仍在演进，遇到不一致时**以 spec 为准并回报**。
 
 | # | 缺口 | 影响 | 临时约定 |
 | --- | --- | --- | --- |
 | 1 | `new_course.py` / `new_lecture.py` 的 **CLI 未定义**（spec §1 只给脚本名与作用）；且 spec §1 把 `new_course.py` 画在**课程仓库内**，而实现放在**平台主仓库** `scripts/` 下 | 无法从 spec 写出确定的开工命令 | 按实现的 `--help` 为准（已记录于 §2/§5）；若行为与 §1 结构不符，**按 spec §1/§2/§3/§4 手工建目录与文件**。绝不臆造参数 |
-| 2 | `validate.py` 的 **CLI 未定义**（只冻结了退出码） | 无法「只校验单篇」；大仓库全量跑变慢 | 统一全量 `python scripts/validate.py`。实现另有 `--root` / `--quiet`，属实现细节（见 §14-11） |
+| 2 | `validate.py` 的 **CLI 未定义**（只冻结了退出码） | 无法「只校验单篇」；大仓库全量跑变慢 | 统一全量 `python scripts/validate.py`。实现另有 `--root` / `--quiet`，属实现细节（见 §14-9） |
 | 3 | `[output].default_mode` 与逐讲 `output_mode` 的**优先级未定义** | 授权闸门判定口径含糊 | 闸门判定**以逐讲 `output_mode` 为准**（spec §6.2 即如此检查）；`default_mode` 在阶段 ② 出结论前恒为 `explanation` |
-| 4 | `[license]` 只有**一个** `verified` 布尔，而 content-policy 要求**分材料类型**核实（笔记 / 视频 / 作业 / 教材许可可能各不相同） | 无法在 `course.toml` 表达「笔记已授权但视频未授权」 | 在 PR 描述与 `docs/licensing-research-log.md` 中**分类型**记录；`verified = true` 只在「本课程要用的**全部**材料都已核实」时才置位 |
-| 5 | 讲座 **front matter 无复核人 / 复核日期字段**（spec §4 已冻结字段） | 复核证据无处存放 | 用 PR 描述 + `status` 字段承载（CONTRIBUTING §3 已要求 PR 写明授权依据与术语变更）；不新增 front matter 字段 |
-| 6 | **ASCII 长段落探测的判定细节未定义**（阈值、是否豁免代码块、是否剥离 Markdown 标记） | 合法代码块可能被误判，或作者不清楚什么会被拦 | 当前实现：`>400 字符` 且 `ASCII ≥ 90%` 且 `空格 ≥ 40` 才算可疑，且**跳过围栏代码块 / 标题 / 表格行**、判定前剥离行内代码与链接。**建议 spec 补齐这些细节**；本手册仍要求代码块加中文注释并保持短小（可读性 + 保守） |
-| 7 | 一个讲座只有**一个** `source_url` / `source_title` / `source_kind` | 多源讲座（笔记 + 视频 + 教材）无法如实署名 | 填**主讲**来源，其余来源在正文「溯源」小节列出；如长期需要多源，提请 spec 扩展 |
-| 8 | 目录名 `content/<NN>-<slug>/` 与 front matter `slug` 的**一致性未被校验**（§6.3 只查 slug 唯一） | 目录名与 slug 不一致时站点 URL 与目录错位 | 人工检查：目录名 `<NN>` 用两位补零，`<slug>` 与 front matter 完全相同 |
-| 9 | `course-diagram` 的**产出契约未定义**（SVG 尺寸 / 命名 / alt 文本 / 是否内联） | 配图风格与可访问性靠自觉 | 图放 `content/<NN>-<slug>/figures/<slug>-<n>.svg`；正文用 `![<中文说明>](figures/...)`，alt 文本必须写 |
-| 10 | **多词术语的标记 key 派生规则未定义**（spec §5 只给单词示例 `[[term:replication]]`） | 作者可能写成 `[[term:leader election]]` → ERROR；key 写法全凭猜 | 当前实现的规则：`key = en 小写化、空白与下划线转连字符、去掉其他非 [a-z0-9.-] 字符`（`leader election` → `leader-election`）。**建议写入 spec §5**；正文统一用小写 key |
-| 11 | **同一实现的多个 CLI / 字段超出冻结 spec** | 契约与实现漂移，消费方按 spec 写会失败或按实现写会与 spec 冲突 | 已观察到的分歧：① `validate.py` 有 `--root` / `--quiet`；② `build.py` 有 `--root`，且 `--base-url` 默认 `"./"` 而 spec §7 写 `/`；③ `validate.py` 实际要求 `[course]` 多填 `institution` / `source_language` / `target_language`（spec §2 只标 3 个必填）；④ `source_kind` 实际接受 `slides`（spec §4 只有 4 个值）；⑤ `source_title` 实际不是必填；⑥ glossary 实际支持 spec §3 未定义的 `key` 字段。**本手册一律按 spec 写**；分歧请回报给脚本维护者，由 spec 定夺 |
-| 12 | **`content/` 下没有任何讲座时 `validate.py` 报 ERROR** | 新生成的空课程仓库跑校验会 exit 1，容易被误判为配置错误 | 阶段 ① 只要求「除『没有任何讲座』外无其他 ERROR」；建好第一讲骨架后再跑一次应当 exit 0。**建议 spec §6 明确这一条**（要么列入 ERROR，要么允许空课程） |
-| 13 | `build.py` 对 `status = "draft"` 的讲座**是否发布**未定义（§6 WARN 8 只说会标注「草稿」） | 可能把草稿推到线上 | **发布闸门靠人工**：只发布 `approved` 的讲座，不依赖 `build.py` 过滤 |
-| 14 | spec §9 规定首批 **5** 个 skill（含 `course-diagram`），但本手册只覆盖 4 个（`course-diagram` 由其他产出负责） | 交叉引用可能指向尚不存在的 skill | `course-explain` 中「交给 `course-diagram`」的引用在 `skills/course-diagram/SKILL.md` 落地前，暂时手绘 SVG 按 §14-9 的约定存放 |
+| 4 | 讲座 **front matter 无复核人 / 复核日期字段**（spec §4 字段已冻结） | 复核证据无处存放 | 用 PR 描述 + `status` 字段承载（CONTRIBUTING §3 已要求 PR 写明授权依据与术语变更）；不新增 front matter 字段 |
+| 5 | **ASCII 长段落探测的判定细节未定义**（阈值、是否豁免代码块、是否剥离 Markdown 标记） | 合法代码块可能被误判，或作者不清楚什么会被拦 | 当前实现：`>400 字符` 且 `ASCII ≥ 90%` 且 `空格 ≥ 40` 才算可疑，且**跳过围栏代码块 / 标题 / 表格行**、判定前剥离行内代码与链接。**建议 spec 补齐这些细节**；本手册仍要求代码块加中文注释并保持短小（可读性 + 保守） |
+| 6 | 一个讲座只有**一个** `source_url` / `source_title` / `source_kind` | 多源讲座（笔记 + 视频 + 教材）无法如实署名 | 填**主讲**来源，其余来源在正文「溯源」小节列出；如长期需要多源，提请 spec 扩展 |
+| 7 | 目录名 `content/<NN>-<slug>/` 与 front matter `slug` 的**一致性未被校验**（§6.3 只查 slug 唯一） | 目录名与 slug 不一致时站点 URL 与目录错位 | 人工检查：目录名 `<NN>` 用两位补零，`<slug>` 与 front matter 完全相同 |
+| 8 | `course-diagram` 的**产出契约未定义**（SVG 尺寸 / 命名 / alt 文本 / 是否内联） | 配图风格与可访问性靠自觉 | 图放 `content/<NN>-<slug>/figures/<slug>-<n>.svg`；正文用 `![<中文说明>](figures/...)`，alt 文本必须写 |
+| 9 | **同一实现的多个 CLI / 字段超出冻结 spec** | 契约与实现漂移，消费方按 spec 写会失败或按实现写会与 spec 冲突 | 已观察到的分歧：① `validate.py` 有 `--root` / `--quiet`；② `build.py` 有 `--root`，且 `--base-url` 默认 `"./"` 而 spec §7 写 `/`；③ `validate.py` 实际要求 `[course]` 多填 `institution` / `source_language` / `target_language`（spec §2 只标 3 个必填）；④ `source_kind` 实际接受 `slides`（spec §4 只有 4 个值，且新增的 `[license.materials]` 也按这 4 类匹配，`slides` 永不匹配）；⑤ `source_title` 实际不是必填。**本手册一律按 spec 写**；分歧请回报给脚本维护者，由 spec 定夺 |
+| 10 | **`content/` 下没有任何讲座时 `validate.py` 报 ERROR** | 新生成的空课程仓库跑校验会 exit 1，容易被误判为配置错误 | 阶段 ① 只要求「除『没有任何讲座』外无其他 ERROR」；建好第一讲骨架后再跑一次应当 exit 0。**建议 spec §6 明确这一条**（要么列入 ERROR，要么允许空课程） |
+| 11 | `build.py` 对 `status = "draft"` 的讲座**是否发布**未定义（§6 WARN 8 只说会标注「草稿」） | 可能把草稿推到线上 | **发布闸门靠人工**：只发布 `approved` 的讲座，不依赖 `build.py` 过滤 |
+| 12 | **spec §6.2 的措辞未与 §2 的 `[license.materials]` 同步**：§6.2 仍写「`license.verified != true` → ERROR」，而 §2 规定「存在 `materials` 时只认 `materials`，不看 `verified`」 | 只读 §6 的人会误以为 `verified` 是唯一闸门，可能据此把 `verified = true` 当成万能开关 | 以 §2 的判定顺序为准：**有 `materials` 就只认 `materials[source_kind]`**；建议把 §6.2 改写成引用 §2 的 `license_allows()` |
+| 13 | spec §9 规定首批 **5** 个 skill（含 `course-diagram`），但本手册只覆盖 4 个（`course-diagram` 由其他产出负责） | 交叉引用可能指向尚不存在的 skill | `course-explain` 中「交给 `course-diagram`」的引用在 `skills/course-diagram/SKILL.md` 落地前，暂时手绘 SVG 按 §14-8 的约定存放 |
