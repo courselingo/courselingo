@@ -21,7 +21,10 @@
 - [x] `new_course.py` / `new_lecture.py` —— 脚手架
 - [x] **授权闸门按材料类型逐项核实**（笔记 ≠ 视频，各类许可常不同）
 - [x] 5 个 **Agent Skills** + [操作手册 SOP](./docs/SOP.md)
-- [ ] 发布流水线（GitHub Pages）与配图规范 —— 进行中
+- [x] **发布流水线**：GitHub Pages + 三个工作流（校验 / 部署 / 链接巡检）
+      —— 决策记录见 [publishing.md](./docs/publishing.md)
+- [x] **配图规范** [diagram-conventions.md](./docs/diagram-conventions.md) + 合规示例图
+- [ ] 把 `svg-diagram` 的房规 linter 纳入 CI（需先确定 LICENSE 与是否 vendor）
 
 **授权（曾经的阻塞项，已解除）**
 

@@ -191,8 +191,12 @@ python scripts/validate.py [--root .] [--quiet]
 | `validate.yml` | push / PR | 跑 `validate.py`，有 ERROR 即失败 |
 | `deploy.yml` | push to `main` | `validate.py` → `build.py` → 部署 `site/` 到 GitHub Pages |
 
-- 运行环境 `ubuntu-latest` + `actions/setup-python@v5`（3.12），**不需要** npm。
-- Pages 通过 `actions/configure-pages` + `actions/upload-pages-artifact` + `actions/deploy-pages` 部署，权限 `pages: write` / `id-token: write`。
+- 运行环境 `ubuntu-latest` + `actions/setup-python@v7`（3.12），**不需要** npm / pip。
+- Pages 通过 `actions/configure-pages@v6` + `actions/upload-pages-artifact@v5` +
+  `actions/deploy-pages@v5` 部署，权限 `pages: write` / `id-token: write`。
+- `checkout@v7`。版本于 2026-09-28 经 GitHub Releases API / tags 核实为当前最新主版本。
+- `deploy.yml` 用三个串联 job（`validate` → `build` → `deploy`）落地闸门：
+  `build` 依赖 `validate`、`deploy` 依赖 `build`，于是**校验不通过时部署根本不会发生**。
 
 ## 9. Agent Skills 契约
 
