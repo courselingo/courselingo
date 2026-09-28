@@ -28,13 +28,20 @@ CODE = re.compile(r"```.*?```", re.S)
 
 # ---- 阈值（改这里就是改标准）----
 MIN_FIG_PER_K = 1.2      # 每千汉字图数下限（红线）
-TARGET_FIG_PER_K = 1.8   # 目标带
+TARGET_FIG_PER_K = 1.8   # 参考目标（**不作闸门**，见下方说明）
 MAX_FIG_PER_K = 2.8      # 上限：超过就是拿图凑数
 
 # ★ 真正决定密度的是「每节几张」，不是「每千字几张」。
 #   实测第一轮：每节平均 3.02 张，22 个小节 ≥3 张，最极端 11 张。
 #   图文重复度却都在 0.64 以下 —— 说明问题不是「图在复述正文」，
 #   而是**同一个机制被切成太多张**。所以限制按节来。
+# ★ 为什么密度**下限**不当闸门：
+#   用户抱怨的失败模式是「图太多」，所以上限必须硬。
+#   而「图太少」已经被「每个内容小节 ≥1 张」覆盖 —— 再设密度下限是冗余的，
+#   而且冗余约束会在「小节少而长」的页面上和上限直接打架：实测
+#   mapreduce（5 节 / 6981 字）按每节上限只有 12 张，密度 1.72 < 1.8 → 无解。
+#   度量互相矛盾时，应当删掉冗余的那一条，而不是让执行者去凑数。
+#   TARGET 仅作参考输出，不影响退出码。
 MAX_FIG_PER_SECTION = 2      # 每个内容小节最多几张（超过即 ERROR）
 LONG_SECTION_CJK = 1500      # 超过这个长度的小节放宽到 MAX_FIG_PER_SECTION + 1
 MAX_GAP_CJK = 1200       # 连续多少汉字无图算「缺口」
@@ -126,10 +133,6 @@ def audit(path: Path, root: Path, systems: list[str] | None = None,
             f"[配图密度] {n_img} 幅 / {per_k:.1f}k 汉字 = 每千字 {n_img/per_k:.2f} 幅"
             f"（下限 {MIN_FIG_PER_K}，目标 {TARGET_FIG_PER_K}）⇒ 至少还需 "
             f"{int(MIN_FIG_PER_K*per_k)+1-n_img} 幅"
-        )
-    elif n_img / per_k < TARGET_FIG_PER_K:
-        warns.append(
-            f"[配图密度] 每千字 {n_img/per_k:.2f} 幅，未达目标 {TARGET_FIG_PER_K}"
         )
     if n_img / per_k > MAX_FIG_PER_K:
         warns.append(
