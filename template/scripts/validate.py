@@ -287,7 +287,11 @@ def check_body(rel: str, body: str, rep: Report, glossary_index: dict[str, tuple
                 "疑似整段转载英文原文（违反内容策略）："
                 f"{suspect[:60]}…（{len(suspect)} 字符，几乎全为 ASCII）",
             )
-        low = para.lower()
+        # 术语漂移：正文里出现了 glossary 的英文原词却没打标记。
+        # ★ 必须先把 [[term:...]] 标记自身剥掉再找 —— 否则当 glossary 里有 en = "term"
+        #   （Raft 的「任期」）这种词时，每个标记里的字面 "term" 都会误报；
+        #   同理 en = "log" 会命中 [[term:write-ahead-log]] 的 key 文本。
+        low = TERM_RE.sub(" ", para).lower()
         for key, (en, _zh) in glossary_index.items():
             if key in used:
                 continue
