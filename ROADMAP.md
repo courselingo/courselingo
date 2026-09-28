@@ -31,9 +31,13 @@
 - [x] **逐课程核实授权状态** —— 见 [course-catalog.md](./docs/course-catalog.md)
       与 [licensing-research-log.md](./docs/licensing-research-log.md)。
       方法：`curl -x socks5h://127.0.0.1:7892`（**端口 7892 是 SOCKS5 不是 HTTP**，写成 http 会静默失败）。
-      🔴 **结论：6.824 与 CS 61A 均未声明开放许可（= 保留所有权利）**，
-      因此 `transcript` 模式在这两门课上**不可用**；只有「我们自己写的讲解」可做。
-      MIT OCW 是 CC BY-NC-SA 4.0（禁商用 + ShareAlike 传染）。
+      ⚠️ **必须抓原始 HTML** —— 许可常写在 `<a rel="license">` 的**图片徽章**里，
+      把标签过滤掉再搜文本会全部漏掉（我们踩过这个坑，并因此得出过错误结论）。
+      - ✅ **MIT 6.824 / 6.1810：CC BY 3.0 US** —— 允许翻译与商用，只需署名，无 NC / 无 SA。
+        **Lab 代码与答案除外**（课程明确要求不得公开）。
+      - 🟡 **MIT OCW / Composing Programs：CC BY-NC-SA 4.0** —— 禁商用 + ShareAlike 传染。
+      - 🔴 **CS 61A、CMU 15-445：未声明许可**（= 保留所有权利）→ 只能做原创讲解。
+      - 🟡 **Stanford CS 144：lab 公开，但要求不得公开解答。**
 - [ ] 确定代码与内容的**授权协议**
 - [ ] 若要走逐字稿路线：给 6.824 / CS 61A 讲师或版权方写信申请书面授权
 - [ ] 核实 MIT OCW 上是否有 6.824 对应课程（决定能否用 CC 许可替代「无许可」）
