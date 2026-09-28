@@ -27,9 +27,16 @@ IMG = re.compile(r"!\[[^\]]*\]\((figures/[^)]+\.svg)\)")
 CODE = re.compile(r"```.*?```", re.S)
 
 # ---- 阈值（改这里就是改标准）----
-MIN_FIG_PER_K = 2.0      # 每千汉字图数下限
-TARGET_FIG_PER_K = 3.0   # 目标带
-MAX_FIG_PER_K = 5.0      # 上限：超过就是拿图凑数
+MIN_FIG_PER_K = 1.2      # 每千汉字图数下限（红线）
+TARGET_FIG_PER_K = 1.8   # 目标带
+MAX_FIG_PER_K = 2.8      # 上限：超过就是拿图凑数
+
+# ★ 真正决定密度的是「每节几张」，不是「每千字几张」。
+#   实测第一轮：每节平均 3.02 张，22 个小节 ≥3 张，最极端 11 张。
+#   图文重复度却都在 0.64 以下 —— 说明问题不是「图在复述正文」，
+#   而是**同一个机制被切成太多张**。所以限制按节来。
+MAX_FIG_PER_SECTION = 2      # 每个内容小节最多几张（超过即 ERROR）
+LONG_SECTION_CJK = 1500      # 超过这个长度的小节放宽到 MAX_FIG_PER_SECTION + 1
 MAX_GAP_CJK = 1200       # 连续多少汉字无图算「缺口」
 MAX_SENT_CJK = 120       # 单句最长汉字数
 MAX_SENT_AVG = 55        # 平均句长
@@ -110,11 +117,21 @@ def audit(path: Path, root: Path) -> tuple[list[str], list[str]]:
         for i, (pos, title) in enumerate(marks):
             end = marks[i + 1][0] if i + 1 < len(marks) else len(body)
             seg = body[pos:end]
-            if not IMG.search(seg):
-                # 「读完应该能回答」「脉络回顾」「溯源」这类收尾小节不强制配图
-                if re.search(r"(应该能回答|脉络回顾|小结|溯源|来源|延伸阅读)", title):
-                    continue
+            # 收尾小节不强制配图
+            if re.search(r"(应该能回答|脉络回顾|小结|溯源|来源|延伸阅读)", title):
+                continue
+            n_here = len(IMG.findall(seg))
+            if n_here == 0:
                 errs.append(f"[小节缺图] 「{title[:28]}」整节没有配图")
+            # ★ 上限比下限更重要：一个机制画三张以上就是把读者切晕
+            elif n_here > MAX_FIG_PER_SECTION:
+                seg_cjk = len(CJK.findall(seg))
+                cap = MAX_FIG_PER_SECTION + (1 if seg_cjk > LONG_SECTION_CJK else 0)
+                if n_here > cap:
+                    errs.append(
+                        f"[小节过密] 「{title[:26]}」{seg_cjk} 汉字配了 {n_here} 张图"
+                        f"（上限 {cap}）—— 同一机制切太碎，应当合并而不是各画一张"
+                    )
 
     # ---- C. 无图缺口 ----
     if imgs:
