@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 326" width="760" height="326"
+     role="img" aria-labelledby="fig-distributed-system-3-title fig-distributed-system-3-desc">
+  <title id="fig-distributed-system-3-title">三个副本里两个确认，就算写入成功</title>
+  <desc id="fig-distributed-system-3-desc">节点 A 与节点 B 已写入并确认，节点 C 超时状态未知；两个确认构成三副本的多数派，写入可以返回成功，节点 C 落后的一份等它恢复后补齐。</desc>
+
+  <defs>
+    <style>
+      text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="2" refY="4"
+            orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="326" fill="#ffffff"/>
+
+  <text x="380" y="34" font-size="16" font-weight="600" fill="#1f2937" text-anchor="middle">三个副本里两个确认，就算写入成功</text>
+
+  <rect x="22" y="66" width="220" height="68" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="132" y="94" font-size="15" font-weight="600" fill="#b45309" text-anchor="middle">节点 A</text>
+  <text x="132" y="116" font-size="12" fill="#b45309" text-anchor="middle">已写入并确认</text>
+
+  <rect x="268" y="66" width="220" height="68" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="378" y="94" font-size="15" font-weight="600" fill="#b45309" text-anchor="middle">节点 B</text>
+  <text x="378" y="116" font-size="12" fill="#b45309" text-anchor="middle">已写入并确认</text>
+
+  <rect x="514" y="66" width="220" height="68" rx="8" fill="#ffffff" stroke="#64748b"/>
+  <text x="624" y="94" font-size="15" font-weight="600" fill="#64748b" text-anchor="middle">节点 C</text>
+  <text x="624" y="116" font-size="12" fill="#64748b" text-anchor="middle">超时，状态未知</text>
+
+  <rect x="22" y="160" width="716" height="54" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="380" y="182" font-size="12" fill="#166534" text-anchor="middle">2 个确认就是多数派，写入可以对客户端返回成功</text>
+  <text x="380" y="200" font-size="12" fill="#166534" text-anchor="middle">节点 C 落后一份数据，等它恢复后补齐</text>
+
+  <path d="M132,139 L132,149" fill="none" stroke="#64748b" marker-end="url(#arrow)"/>
+  <path d="M378,139 L378,149" fill="none" stroke="#64748b" marker-end="url(#arrow)"/>
+
+  <rect x="22" y="240" width="716" height="64" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>
+  <text x="380" y="264" font-size="11" fill="#1e293b" text-anchor="middle">「确认」只说明对方声称写了，不说明它真的落了盘</text>
+  <text x="380" y="284" font-size="10" fill="#64748b" text-anchor="middle">重试与超时留下的歧义，正是后面协议要填的洞</text>
+</svg>

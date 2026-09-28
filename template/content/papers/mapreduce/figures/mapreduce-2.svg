@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 326" width="760" height="326"
+     role="img" aria-labelledby="fig-mapreduce-2-title fig-mapreduce-2-desc">
+  <title id="fig-mapreduce-2-title">map 决定怎么拆，reduce 决定怎么合</title>
+  <desc id="fig-mapreduce-2-desc">map 把一条输入记录拆成若干中间键值对，reduce 把一个键的所有值合成结果；两者之间的按键分区、排序与中间结果搬运全部由框架负责，业务代码不必知道数据在哪台机器上。</desc>
+
+  <defs>
+    <style>
+      text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="2" refY="4"
+            orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="326" fill="#ffffff"/>
+
+  <text x="380" y="34" font-size="16" font-weight="600" fill="#1f2937" text-anchor="middle">map 决定怎么拆，reduce 决定怎么合</text>
+
+  <rect x="22" y="66" width="344" height="68" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="194" y="94" font-size="15" font-weight="600" fill="#1e40af" text-anchor="middle">map(一条记录)</text>
+  <text x="194" y="116" font-size="12" fill="#1e40af" text-anchor="middle">产出若干中间键值对</text>
+
+  <rect x="394" y="66" width="344" height="68" rx="6" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="566" y="94" font-size="15" font-weight="600" fill="#6b21a8" text-anchor="middle">reduce(一个键, 它的所有值)</text>
+  <text x="566" y="116" font-size="12" fill="#6b21a8" text-anchor="middle">产出这个键的最终结果</text>
+
+  <path d="M371,100 L383,100" fill="none" stroke="#64748b" marker-end="url(#arrow)"/>
+
+  <rect x="22" y="160" width="716" height="54" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="380" y="182" font-size="12" fill="#b45309" text-anchor="middle">两者之间的事全归框架：按键分区、排序、把中间结果送到该去的地方</text>
+  <text x="380" y="200" font-size="12" fill="#b45309" text-anchor="middle">业务代码不必知道数据在哪台机器上</text>
+
+  <rect x="22" y="240" width="716" height="64" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>
+  <text x="380" y="264" font-size="11" fill="#1e293b" text-anchor="middle">把「怎么并行」和「算什么」分开，是这篇论文的主张</text>
+  <text x="380" y="284" font-size="10" fill="#64748b" text-anchor="middle">代价是业务逻辑必须能压成「拆」和「合」两步</text>
+</svg>

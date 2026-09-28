@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 312" width="760" height="312"
+     role="img" aria-labelledby="fig-distributed-system-1-title fig-distributed-system-1-desc">
+  <title id="fig-distributed-system-1-title">从函数调用到网络消息：三样保证同时消失</title>
+  <desc id="fig-distributed-system-1-desc">上排对比单机的函数调用与多机的网络消息：调用返回就是做完了，消息发出去却只说明交给了网络；下排列出随之失去的三样保证，丢包、乱序、宕机都要业务自己处理。</desc>
+
+  <defs>
+    <style>
+      text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="2" refY="4"
+            orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="312" fill="#ffffff"/>
+
+  <text x="380" y="34" font-size="16" font-weight="600" fill="#1f2937" text-anchor="middle">从函数调用到网络消息：三样保证同时消失</text>
+
+  <rect x="22" y="66" width="344" height="54" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="194" y="88" font-size="12" fill="#166534" text-anchor="middle">单机：调用一个函数</text>
+  <text x="194" y="106" font-size="12" fill="#166534" text-anchor="middle">返回了就是做完了</text>
+
+  <rect x="394" y="66" width="344" height="54" rx="6" fill="#fce7f3" stroke="#ec4899"/>
+  <text x="566" y="88" font-size="12" fill="#9d174d" text-anchor="middle">多机：发一条消息</text>
+  <text x="566" y="106" font-size="12" fill="#9d174d" text-anchor="middle">发出去不等于收到</text>
+
+  <path d="M371,93 L383,93" fill="none" stroke="#64748b" marker-end="url(#arrow)"/>
+
+  <rect x="22" y="146" width="220" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="132" y="168" font-size="12" fill="#1e40af" text-anchor="middle">丢包</text>
+  <text x="132" y="186" font-size="12" fill="#1e40af" text-anchor="middle">只能靠超时猜</text>
+
+  <rect x="268" y="146" width="220" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="378" y="168" font-size="12" fill="#1e40af" text-anchor="middle">乱序</text>
+  <text x="378" y="186" font-size="12" fill="#1e40af" text-anchor="middle">顺序要业务自己定</text>
+
+  <rect x="514" y="146" width="220" height="54" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="624" y="168" font-size="12" fill="#1e40af" text-anchor="middle">宕机</text>
+  <text x="624" y="186" font-size="12" fill="#1e40af" text-anchor="middle">对端不再回话</text>
+
+  <rect x="22" y="226" width="716" height="64" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="6,4"/>
+  <text x="380" y="250" font-size="11" fill="#1e293b" text-anchor="middle">这三样在单机上是默认成立的</text>
+  <text x="380" y="270" font-size="10" fill="#64748b" text-anchor="middle">到了网络上，一条都不再成立</text>
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 348" width="760" height="348"
+     role="img" aria-labelledby="fig-distributed-system-4-title fig-distributed-system-4-desc">
+  <title id="fig-distributed-system-4-title">网络分区：链路断了，两边都还活着</title>
+  <desc id="fig-distributed-system-4-desc">左列是分区前的状态，右列是分区之后：两个节点都活着，但消息全丢，各自以为对方挂了并可能选出新的主，同一份数据出现两条主线，恢复后需要有人裁决谁算数。</desc>
+
+  <defs>
+    <style>
+      text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="2" refY="4"
+            orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="348" fill="#ffffff"/>
+
+  <text x="380" y="34" font-size="16" font-weight="600" fill="#1f2937" text-anchor="middle">网络分区：链路断了，两边都还活着</text>
+
+  <rect x="22" y="66" width="344" height="68" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="194" y="94" font-size="15" font-weight="600" fill="#166534" text-anchor="middle">两边都活着</text>
+  <text x="194" y="116" font-size="12" fill="#166534" text-anchor="middle">各自还能正常服务</text>
+
+  <rect x="394" y="66" width="344" height="68" rx="6" fill="#fce7f3" stroke="#ec4899"/>
+  <text x="566" y="94" font-size="15" font-weight="600" fill="#9d174d" text-anchor="middle">链路断了</text>
+  <text x="566" y="116" font-size="12" fill="#9d174d" text-anchor="middle">消息全部丢失</text>
+
+  <rect x="22" y="162" width="344" height="68" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="194" y="190" font-size="15" font-weight="600" fill="#166534" text-anchor="middle">各自以为对方挂了</text>
+  <text x="194" y="212" font-size="12" fill="#166534" text-anchor="middle">都可能选出新的主</text>
+
+  <rect x="394" y="162" width="344" height="68" rx="6" fill="#fce7f3" stroke="#ec4899"/>
+  <text x="566" y="190" font-size="15" font-weight="600" fill="#9d174d" text-anchor="middle">同一份数据两条线</text>
+  <text x="566" y="212" font-size="12" fill="#9d174d" text-anchor="middle">两边都接受写入</text>
+
+  <rect x="22" y="258" width="344" height="68" rx="6" fill="#d1fae5" stroke="#22c55e"/>
+  <text x="194" y="286" font-size="15" font-weight="600" fill="#166534" text-anchor="middle">多数派只出一条真相</text>
+  <text x="194" y="308" font-size="12" fill="#166534" text-anchor="middle">少数派那边必须停下来</text>
+
+  <rect x="394" y="258" width="344" height="68" rx="6" fill="#fce7f3" stroke="#ec4899"/>
+  <text x="566" y="286" font-size="15" font-weight="600" fill="#9d174d" text-anchor="middle">落后的副本随后补齐</text>
+  <text x="566" y="308" font-size="12" fill="#9d174d" text-anchor="middle">分叉的数据要有人裁决</text>
+</svg>
