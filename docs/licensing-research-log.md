@@ -403,3 +403,48 @@
    （原文此处写「避免传染到 6.824 的 BY 内容」，该理由现已减弱 —— 6.824 的 BY 边界本身也未确立；
    但隔离做法本身仍然成立：授权边界按仓库隔开是既定的架构约束。）
 5. **(c) 永久排除**，任何课程都不做 —— 这是唯一一条不需要权衡的红线。
+
+---
+
+## 第三批课程核实（2026-09-28 · CS168 与 MIT 6.006）
+
+> 这一批的两门课都由课程作者自己抓原始 HTML 逐页取证，**由 Lead 独立复核**。
+> 复核中修掉的两点写在各条末尾。
+
+### UC Berkeley CS168 · 计算机网络导论
+
+| 材料 | URL | 逐字证据 | 判定 | 我们能发布什么 |
+| --- | --- | --- | --- | --- |
+| 教材**根页** | `https://textbook.cs168.io/` | `rel="license"`×2；「This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.」 | **allowed** | 译文 + 双语对照，**可商用**，须 **SA 同协议** |
+| 教材**章节页** | `/intro/intro.html` 28,259 B、`/intro/layers.html` 34,565 B、`/glossary.html` 41,561 B、`/routing/bgp.html` 37,856 B | `rel="license"`=0、CC 链接=0、版权声明=0 | 声明只在根页 | 同属教材整体；章节页不重复许可属**书籍版权页形态** |
+| 课程站 | `https://fa26.cs168.io/` 与 sp25 的 入口 / `/policies/` / `/calendar/` / `/resources/` | 全部 **0** 声明；4 次 `license` 命中**全是图标库注释**（Feather、Bootstrap Icons 的 MIT License） | **unknown** | 只做**原创讲解**，不转载、不做逐字稿与双语对照 |
+| 讲义 / 幻灯片 / 视频 / 作业 | —— | 均未声明 | **unknown** | 只做原创讲解 |
+| **实验解答** | `https://fa26.cs168.io/policies/` 46,488 B | 逐字：**「DO NOT POST SOLUTIONS TO PROJECTS ONLINE.」** 与 **「This applies even after the semester is over.」**（Lead 已独立抓取复核，各命中 1 次） | **forbidden（该部分）** | **永久排除**：不发布习题解答，学期结束后同样不发布 |
+
+**结论：A 级（教材可翻译、可商用、须 SA）｜B 级（课程站材料仅原创讲解）｜实验解答永久排除。**
+
+**复核中发现并修掉的两点**：
+
+1. 第一次取证的**章节 URL 是猜的**，三个 URL 都返回同一个 **404**（各 18,034 B，
+   与一个故意编造的 URL 返回完全相同的页面）。**在 404 上数「许可声明 0 处」没有意义。**
+   第二轮从教材根页导航取出**真实**章节 URL 重测，结论不变（仍全 0）。
+   → 新增陷阱**十二**（多个不同 URL 字节数完全相同 ⇒ 一定是 404）。
+2. 课程站取证一度测的是 `cs168.io`，而它只是 **285 B 的跳转壳**
+   （`<title>Redirecting to https://fa26.cs168.io</title>`），真站在当学期子域。
+   → 新增陷阱**十三**（必须跟到跳转终点）。
+
+### MIT 6.006 · Introduction to Algorithms（OCW）
+
+| 材料 | URL | 逐字证据 | 判定 | 我们能发布什么 |
+| --- | --- | --- | --- | --- |
+| 课程页 / 讲义页 / syllabus / 第 1 讲资源页 | MIT OCW | **每页各 2 次**命中：1 次 JSON-LD `"license": "https://creativecommons.org/licenses/by-nc-sa/4.0/"` + 1 次可见页脚 `<a href=".../by-nc-sa/4.0/">Creative Commons License</a>`；同 4 页 `All rights reserved` / `excluded from` 均为 **0** | **allowed** | 译文 + 双语对照，**仅限非商用**，须署名且 **SA 同协议** |
+| 讲义（notes） | 同上 | 同上 | **allowed** | 可翻译 |
+| 幻灯片 PDF | —— | **未逐个打开**，保守记为未核实 | **unknown** | 只做原创讲解 |
+| 视频 | —— | 平台条款另有限制，且本项目不做字幕 | **unknown** | 不做 |
+| 教材 CLRS | —— | Pearson **商业出版物** | **forbidden** | 不碰 |
+
+**结论：A 级（可翻译，NC + SA）｜ 幻灯片 / 视频保守按 B 级 ｜ CLRS 教材不碰。**
+
+> **OCW 的许可是逐页复制的**（与 6.824 只在主页挂徽章相反），所以讲义子页面
+> 单独取证即可成立 —— 这条差异正是陷阱**十**存在的理由，也说明
+> **「徽章挂主页」与「逐页复制」必须分别处理，不能互推**。
