@@ -1,0 +1,37 @@
+# CourseLingo 课程元数据
+# 复制模板建立新课程后，把下面的值全部替换掉。
+
+[course]
+id = "demo"
+title = "CourseLingo Demo — What is a Distributed System"
+title_zh = "CourseLingo 演示课程"
+institution = "CourseLingo"
+course_number = "DEMO-101"
+homepage = ""
+source_language = "en"
+target_language = "zh"
+
+# ★ 授权闸门。
+# verified = true 之前，validate.py 会硬拦截任何 output_mode = "transcript" 的讲座。
+# 核实方法见 docs/course-catalog.md 的「待抓取清单」与 docs/content-policy.md。
+[license]
+verified = false
+terms = ""
+evidence_url = ""
+checked_at = ""
+allows_commercial = false
+allows_derivatives = false
+share_alike = false
+notes = "模板自带的演示课程，未对应任何真实课程。真实课程必须逐项核实后填写。"
+
+# 按材料类型逐项核实（推荐）。
+# 「笔记已授权」不等于「视频也已授权」—— 各类材料的许可经常不同。
+# 一旦这里写了值，授权闸门就只认它，不再看上面的 verified。
+[license.materials]
+notes = false
+video = false
+textbook = false
+other = false
+
+[output]
+default_mode = "explanation"   # explanation | transcript（transcript 需先核实授权）

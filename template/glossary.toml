@@ -1,0 +1,38 @@
+# CourseLingo 术语表 —— 本项目的核心资产
+#
+# 规则（见 docs/pipeline-spec.md）：
+#   - key 默认由 en 推导：小写、空格与下划线转连字符。
+#     例如 en = "distributed system" -> 正文中写 [[term:distributed-system]]
+#   - 同一概念全课程同译。改术语必须走评审，不要静默修改。
+#   - 正文引用术语一律用 [[term:key]]，不要手写「中文（English）」。
+
+[[term]]
+en = "distributed system"
+zh = "分布式系统"
+notes = "多台机器通过网络协作，对外表现为一个系统"
+
+[[term]]
+en = "node"
+zh = "节点"
+notes = "集群中的一台机器或一个独立进程"
+
+[[term]]
+en = "replication"
+zh = "副本"
+aliases = ["replica", "replicas"]
+notes = "把同一份数据存放在多个节点上，以提升可用性"
+
+[[term]]
+en = "consensus"
+zh = "共识"
+notes = "多个节点就某个值或某个顺序达成一致的过程"
+
+[[term]]
+en = "fault tolerance"
+zh = "容错"
+notes = "系统在部分组件失效时仍能继续正确工作"
+
+[[term]]
+en = "leader election"
+zh = "领导者选举"
+notes = "在多个节点中选出一个负责协调的节点"

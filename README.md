@@ -26,21 +26,66 @@
 ## 目录结构
 
 ```
+template/           ★ 课程仓库模板：复制即成一门新课
+  course.toml         课程元数据 + 授权闸门
+  glossary.toml       术语表（核心资产）
+  content/            讲座：front matter + Markdown + SVG 配图
+  scripts/            new_lecture.py / validate.py / build.py（零依赖）
+  .github/workflows/  校验 + 部署到 GitHub Pages
+skills/             ★ Agent Skills：把 SOP 变成可执行的技能
+  course-init/          课程立项
+  course-translate/     术语表前置的讲座产出
+  course-explain/       讲懂而不只是译完
+  course-diagram/       概念配图
+  course-validate-publish/  校验与发布
+scripts/
+  new_course.py       从 template/ 生成一个新的课程仓库
 docs/
-  architecture.md          翻译与讲解流水线的设计（含授权闸门）
-  content-policy.md        授权、署名与内容边界（必读）
-  course-catalog.md        目标课程清单与授权状态
-  licensing-research-log.md 授权核实记录：当前受阻及其证据
-  brand.md                 命名、口号与语气规范
-ROADMAP.md                 阶段计划
+  SOP.md              端到端操作手册（Agent 与人都照着做）
+  pipeline-spec.md    ★ 接口契约：文件格式、校验规则、构建契约
+  architecture.md     流水线设计（含授权闸门）
+  content-policy.md   授权、署名与内容边界（必读）
+  course-catalog.md   目标课程清单与授权状态
+  licensing-research-log.md  授权核实记录与证据
+  publishing.md       发布方案决策
+  diagram-conventions.md     配图规范
+  brand.md            命名、口号与语气规范
+ROADMAP.md            阶段计划
 ```
 
-`glossary/`（分课程术语表）与 `pipeline/`（流水线代码）将在 Phase 1 落地。
+## 快速开始
+
+零依赖，只需要 **Python 3.11+**（标准库 `tomllib`）。没有 `npm install`，没有 `pip install`。
+
+```bash
+# 1. 从模板生成一门新课
+python scripts/new_course.py --id mit-6.5840 --out ../courses/mit-6.5840 \
+    --title "Distributed Systems" --title-zh "分布式系统" \
+    --institution MIT --course-number "6.5840 / 6.824" \
+    --homepage "https://pdos.csail.mit.edu/6.824/"
+
+# 2. 在课程仓库里新增一讲、校验、构建
+cd ../courses/mit-6.5840
+python scripts/new_lecture.py --title "Raft 领导者选举" --slug raft-leader-election \
+    --source-url "https://pdos.csail.mit.edu/6.824/" --source-title "Raft (2)"
+python scripts/validate.py
+python scripts/build.py --out site
+```
+
+想先看看效果，可以不生成新课，直接构建模板自带的演示课程：
+
+```bash
+python template/scripts/build.py --root template --out template/site
+# 打开 template/site/index.html
+```
+
 
 ## 两条不可让步的底线
 
 1. **授权** —— 只发布我们自己的翻译与讲解，不转载原始课件、视频与作业答案。逐课程核对许可，见 [content-policy.md](./docs/content-policy.md)。
 2. **术语一致** —— 同一概念全篇同译。术语表先行，翻译跟随。
+
+这两条不是写在文档里的口号，而是**代码层面的强制**：`validate.py` 会在授权未核实时拒绝任何逐字稿翻译，并拦下疑似整段转载的英文原文。
 
 ## 快速开始
 

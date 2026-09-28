@@ -6,18 +6,36 @@
 
 目标：让项目「可开工、可协作、不侵权」。
 
-- [x] 建立 GitHub 组织 `courselingo`
-- [x] 组织主页与社区规范（`.github` 仓库）
-- [x] 平台主仓库骨架与本路线图
+**组织与门面**
+
+- [x] 建立 GitHub 组织 `courselingo`（display name 待设置）
+- [x] 组织主页与社区规范（[`.github` 仓库](https://github.com/courselingo/.github)）
+- [x] 平台主仓库与本路线图（[courselingo](https://github.com/courselingo/courselingo)）
+
+**流水线（零依赖，已跑通并测试）**
+
+- [x] 冻结**接口契约** —— [pipeline-spec.md](./docs/pipeline-spec.md)
+- [x] **课程模板** `template/`：course.toml + glossary.toml + content/ + scripts/
+- [x] `validate.py` —— 授权闸门、术语一致性、格式、原文转载探测（5 类检查）
+- [x] `build.py` —— Markdown → 静态站（零第三方依赖，仅 Python 标准库）
+- [x] `new_course.py` / `new_lecture.py` —— 脚手架
+- [x] **授权闸门按材料类型逐项核实**（笔记 ≠ 视频，各类许可常不同）
+- [x] 5 个 **Agent Skills** + [操作手册 SOP](./docs/SOP.md)
+- [ ] 发布流水线（GitHub Pages）与配图规范 —— 进行中
+
+**授权（曾经的阻塞项，已解除）**
+
 - [ ] 🚧 **逐课程核实授权状态**并写入 [course-catalog.md](./docs/course-catalog.md)
-      —— **当前受阻**：本机网络无法访问任何课程官方页面（DNS 被劫持至 `198.18.0.x`），
+      —— 网络已恢复（Clash fake-IP + SOCKS5 `127.0.0.1:7892`），核实进行中。
       详见 [licensing-research-log.md](./docs/licensing-research-log.md)。
-      **这是 Phase 0 的头号阻塞项**，也是 Phase 1 的前置条件。
+      **这是 Phase 1 的前置条件。**
 - [ ] 确定代码与内容的**授权协议**
-- [ ] 冻结**翻译与讲解的产出格式**（中间 JSON + 站点渲染格式）
-- [ ] 制定**术语表规范**（字段、粒度、评审流程）
-- [ ] 选定 MVP 技术栈（站点框架、模型与调用方式、成本估算）
+
+**待办**
+
 - [ ] 建立**质量评估**基线（术语一致率、抽样人工复核）
+- [ ] 选定模型与调用方式、成本估算
+- [ ] 把 Agent Skills 安装到本机技能目录（见 [skills/README.md](./skills/README.md)）
 
 **出口条件**：任一课程的一条讲座可以被完整产出并通过人工复核，且全程有授权依据。
 

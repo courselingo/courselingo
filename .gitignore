@@ -42,3 +42,6 @@ venv/
 /cache/
 /tmp/
 *.tmp
+
+# 核实授权时抓取的原始页面：本地留证用，不入库
+/docs/_fetch/
