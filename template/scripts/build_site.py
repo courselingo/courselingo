@@ -161,6 +161,13 @@ def main(argv: list[str] | None = None) -> int:
     shutil.copy2(web / "assets" / "bi.js", docs / "assets" / "bi.js")
     shutil.copy2(web / "assets" / "site.css", docs / "assets" / "site.css")
     shutil.copy2(web / "assets" / "mathjax.js", docs / "assets" / "mathjax.js")
+    # 只复制 favicon。
+    # logo.png / logo-square.png 曾经给 header 用，现在 header 用 Material 默认图标
+    # （与 csdiy 一致），站内 0 处引用 —— 不再复制，省掉每站约 490 KB 的死重。
+    for brand in ("favicon.png", "favicon-32.png"):
+        src = root / "assets" / brand
+        if src.is_file():
+            shutil.copy2(src, docs / "assets" / brand)
 
     # ---------- 讲座 ----------
     seen_figs: dict[str, str] = {}
@@ -275,6 +282,13 @@ def main(argv: list[str] | None = None) -> int:
     nav.append("- 术语表: glossary.md")
 
     cfg_yml = f"""site_name: {site_title}
+# 右上角显示本课程的仓库。repo_name 会显示在图标旁（宽屏）。
+# 带上组织名，让 CourseLingo 的归属一眼可见。
+repo_url: https://github.com/courselingo/mit-6.5840
+repo_name: courselingo/mit-6.5840
+# 本站的 docs/ 是 build_site.py **生成**的，不是源文件 ——
+# 默认的「编辑此页」会指向生成物，所以关掉，避免误导贡献者。
+edit_uri: ""
 site_description: {course.get('title', '')} — CourseLingo 中文讲解
 docs_dir: {docs.as_posix()}
 site_dir: {(root / args.out).as_posix()}
@@ -283,6 +297,9 @@ use_directory_urls: false
 theme:
   name: material
   language: zh
+  # 左上角保持 Material 默认图标（不设 theme.logo）—— 与 csdiy 一致。
+  # 课程归属信息放到右上角的仓库链接里，见下面的 repo_url / repo_name。
+  favicon: assets/favicon.png
   features:
     - navigation.instant
     - navigation.tracking
@@ -307,6 +324,9 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: 切换到浅色
+  icon:
+    # 右上角仓库图标用 GitHub 品牌图标（csdiy 同款）
+    repo: fontawesome/brands/github
 
 extra_css:
   - assets/bi.css
@@ -340,6 +360,19 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - extensions.bilingual
+
+extra:
+  # 页脚图标链接（右上角是仓库；这里补充组织与平台仓库）
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/courselingo
+      name: CourseLingo 组织
+    - icon: fontawesome/solid/book
+      link: https://courselingo.github.io/
+      name: 组织主页
+    - icon: fontawesome/solid/scale-balanced
+      link: https://github.com/courselingo/courselingo/blob/main/docs/content-policy.md
+      name: 内容与授权策略
 
 nav:
 {chr(10).join('  ' + line for line in nav)}
