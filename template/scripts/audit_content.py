@@ -47,12 +47,38 @@ MAX_SAME_LAYOUT = 0.15   # 同一版面指纹最多占全部图的比例（超�
 LAYOUT_HARD = 0.25       # 超过这个比例判 ERROR（视觉通道失效）
 MIN_H2 = 5               # 小节数下限
 
-SYSTEMS = [
+# 默认名单只是**兜底**，不是标准答案：它偏分布式系统，因为本项目的第一个
+# 课程是 MIT 6.824。算法课、机器学习系统课各有自己的「具体对象」，
+# 所以真正的名单由 course.toml 的 [audit].named_systems 追加 ——
+# 域相关的启发式不该写死在通用脚本里。
+DEFAULT_SYSTEMS = [
     "GFS", "MapReduce", "Raft", "Paxos", "ZooKeeper", "Spanner", "Chubby",
     "HDFS", "Ceph", "Dynamo", "BigTable", "Kafka", "etcd", "Memcached",
     "Aurora", "Frangipani", "CRAQ", "Chain Replication", "VMware FT",
     "gRPC", "Thrift", "NFS", "AFS", "xv6", "Go", "RPC", "ZAB", "Multi-Paxos",
+    # 跨领域也算得上的通用工具与语言，避免非系统课被误判
+    "Python", "Java", "C++", "Rust", "SQLite", "PostgreSQL", "Linux",
+    "Docker", "Kubernetes", "Redis", "SQL", "HTTP", "TCP", "JSON",
 ]
+
+
+def load_audit_config(root: Path) -> dict:
+    """读 course.toml 的 [audit]（named_systems / named_systems_min）。"""
+    cfg = root / "course.toml"
+    if not cfg.exists():
+        return {}
+    try:
+        import tomllib
+        return tomllib.loads(cfg.read_text(encoding="utf-8")).get("audit", {}) or {}
+    except Exception:
+        return {}
+
+
+def systems_for(root: Path) -> tuple[list[str], int]:
+    c = load_audit_config(root)
+    extra = [str(x) for x in (c.get("named_systems") or [])]
+    minimum = int(c.get("named_systems_min", MIN_NAMED_SYSTEMS))
+    return DEFAULT_SYSTEMS + extra, minimum
 
 
 def force_utf8() -> None:
@@ -76,7 +102,8 @@ def sentences(body: str) -> list[str]:
     return [p.strip() for p in parts if CJK.search(p)]
 
 
-def audit(path: Path, root: Path) -> tuple[list[str], list[str]]:
+def audit(path: Path, root: Path, systems: list[str] | None = None,
+          named_min: int = MIN_NAMED_SYSTEMS) -> tuple[list[str], list[str]]:
     """返回 (errors, warnings)。"""
     raw = path.read_text(encoding="utf-8")
     body = strip_fm(raw)
@@ -189,9 +216,10 @@ def audit(path: Path, root: Path) -> tuple[list[str], list[str]]:
             f"[不够具体] 具体数字 {len(nums)} 个 / {per_k:.1f}k 字"
             f"（下限 {MIN_NUM_PER_K}/千字）—— 多给数字、少下形容词"
         )
-    named = sum(1 for s in SYSTEMS if s.lower() in body.lower())
-    if named < MIN_NAMED_SYSTEMS:
-        warns.append(f"[点名不足] 只点到 {named} 个具体系统/协议（建议 ≥{MIN_NAMED_SYSTEMS}）")
+    pool = systems if systems is not None else DEFAULT_SYSTEMS
+    named = sum(1 for s in pool if s.lower() in body.lower())
+    if named < named_min:
+        warns.append(f"[点名不足] 只点到 {named} 个具体对象（建议 ≥{named_min}）")
 
     # ---- G. 结构与术语 ----
     if len(h2s) < MIN_H2:
@@ -286,8 +314,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"内容审计：{len(files)} 篇")
     corpus_errs, corpus_warns = audit_layouts(root)
     n_err = n_warn = 0
+    pool, named_min = systems_for(root)
     for f in files:
-        errs, warns = audit(f, root)
+        errs, warns = audit(f, root, pool, named_min)
         rel = f.relative_to(root).as_posix()
         n_err += len(errs)
         n_warn += len(warns)

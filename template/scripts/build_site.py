@@ -25,6 +25,42 @@ from urllib.parse import quote
 import banners  # 同目录：页面顶部授权提示条
 import llms  # 同目录：发布 llms.txt 与每页 Markdown
 
+def licence_sentence(lic: dict) -> str:
+    """由 course.toml 的 **[license] 表本身**推导首页授权横幅。
+
+    ★ 绝不写死。许可写错是本项目最不该犯的错：同一句话对 A 级课程是事实，
+      对 B 级课程就是虚假陈述。判定口径见 docs/content-policy.md。
+    """
+    lic = lic or {}
+    terms = str(lic.get("terms", "")).strip() or "未声明"
+    verified = bool(lic.get("verified", False))
+    deriv = bool(lic.get("allows_derivatives", False))
+    comm = bool(lic.get("allows_commercial", False))
+    sa = bool(lic.get("share_alike", False))
+    redist = str(lic.get("redistribution", "unknown")).lower()
+
+    if not verified:
+        # 没核实 = 不声称任何权利。只讲我们自己的原创内容。
+        return (
+            f"上游许可：**尚未核实**（{terms}）。\n\n"
+            "因此本站**只发布 CourseLingo 自己撰写的原创讲解** —— 讲概念、不转载课程原文，"
+            "也不做逐段对照。原作者与院校保留一切权利。\n\n"
+        )
+
+    parts = [f"上游许可：{terms}。"]
+    if not deriv:
+        parts.append("该许可**不允许衍生作品**，因此本站只发布原创讲解。")
+    else:
+        parts.append("允许翻译" + ("与商用" if comm else "，但**仅限非商用**") + "，需署名。")
+        if sa:
+            parts.append("**同协议（SA）**：本站由该材料衍生的内容同样以该协议发布。")
+    if redist != "allowed":
+        parts.append("我们**不转载**课程原始材料。")
+    parts.append("原作者与院校保留其权利。")
+    # 让每条一句，读起来是提示而不是律师函
+    return "上游许可：" + "".join(x[len("上游许可："):] if x.startswith("上游许可：") else x for x in parts) + "\n\n"
+
+
 TERM_RE = re.compile(r"\[\[term:([A-Za-z0-9_.\-]+)\]\]")
 H1_RE = re.compile(r"^#\s+", re.M)
 
@@ -264,7 +300,8 @@ def main(argv: list[str] | None = None) -> int:
         f"## 讲座\n\n{lec_list}\n\n## 经典论文\n\n{pap_list}\n\n"
         f"## 术语表\n\n[全部术语](glossary.md)\n\n"
         f"## 授权\n\n"
-        f"上游许可：CC BY 3.0 US —— 允许翻译与商用，需署名。\n\n"
+        + licence_sentence(cfg.get("license", {}) or {})
+        + "\n"
         f"详细规则见[内容策略]({PLATFORM_DOCS}/content-policy.md)与"
         f"[论文授权]({PLATFORM_DOCS}/paper-licensing.md)。\n",
         encoding="utf-8",
