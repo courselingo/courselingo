@@ -22,6 +22,10 @@ checked_at = ""
 allows_commercial = false
 allows_derivatives = false
 share_alike = false
+# allowed | forbidden | unknown
+# 设为 "forbidden" 表示课程明确不允许传播 —— 此时 validate.py / build.py 会以
+# **退出码 3 明确拒绝**，不产出任何内容。这是政策性拒绝，不是配置错误。
+redistribution = "unknown"
 notes = "模板自带的演示课程，未对应任何真实课程。真实课程必须逐项核实后填写。"
 
 # 按材料类型逐项核实（推荐）。

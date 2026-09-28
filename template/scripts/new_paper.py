@@ -112,6 +112,16 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     lic = paper.get("license") or {}
+
+    # ★ 政策性拒绝优先：论文明确不允许传播，就不做，也不建页面。
+    if lic.get("redistribution") == "forbidden":
+        print(f"⛔ 拒绝执行：论文 {args.key!r} 明确不允许传播。", file=sys.stderr)
+        print('      [paper.license].redistribution = "forbidden"', file=sys.stderr)
+        if str(lic.get("evidence_url", "")).strip():
+            print(f"      依据：{lic['evidence_url']}", file=sys.stderr)
+        print("      这是政策性拒绝，改内容没有用。见 docs/content-policy.md", file=sys.stderr)
+        return 3
+
     if args.mode == "translation":
         if not (lic.get("verified") is True and lic.get("allows_translation") is True):
             print(f"⛔ 拒绝创建全文翻译页：{args.key!r} 的授权不满足条件。", file=sys.stderr)

@@ -64,6 +64,7 @@ checked_at = ""                   # ISO 日期
 allows_commercial = false
 allows_derivatives = false
 share_alike = false
+redistribution = "unknown"        # ★ allowed | forbidden | unknown
 notes = ""
 
 # 可选但推荐：按材料类型逐项核实。
@@ -148,8 +149,13 @@ output_mode = "explanation"       # explanation | transcript
 | 退出码 | 含义 |
 | --- | --- |
 | `0` | 通过（可能有 WARN） |
-| `1` | 校验失败（ERROR） |
-| `2` | 用法/IO 错误 |
+| `1` | 校验失败（ERROR）—— **内容有问题，可以修** |
+| `2` | 用法 / IO 错误 |
+| `3` | **政策性拒绝** —— 授权明确不允许传播（`redistribution = "forbidden"`） |
+
+> **`1` 与 `3` 的区别很重要。** `1` 说「你这样写不对，改改」；`3` 说「**这件事我们不做**」。
+> 退出码 `3` 时改内容是没用的 —— 唯一的出路是授权状况本身发生变化。
+> `build.py` 同样会以 `3` 退出，且**不产出任何站点**，因此部署链条在第一步就断了。
 
 检查项（ERROR）：
 
@@ -262,6 +268,7 @@ checked_at = ""                   # ISO 日期
 allows_translation = false        # ★ 是否允许翻译
 allows_commercial = false
 share_alike = false
+redistribution = "unknown"        # allowed | forbidden | unknown
 notes = ""
 ```
 
@@ -324,3 +331,52 @@ python scripts/new_paper.py --key mapreduce --title "MapReduce 导读" --mode gu
 4. **逐篇记录** `evidence_url` 与 `checked_at`，无法核实的标 `⚠️ 未确认`，**不要推测**。
 
 结论汇总见 [paper-licensing.md](./paper-licensing.md)。
+
+---
+
+## 11. 我们自己的授权，与「课程规定优先」
+
+### 11.1 本项目产出的授权
+
+取**最宽松**的方案，让人可以随便用：
+
+| 对象 | 协议 |
+| --- | --- |
+| 代码（`scripts/`、`.github/`） | **MIT**（见 `LICENSE`） |
+| 原创内容（讲解、导读、术语表、配图） | **CC BY 4.0**（见 `LICENSE-CONTENT`）—— 允许商用与改编，只需署名 |
+
+### 11.2 ★ 课程规定优先（硬规则）
+
+上面的宽松协议**只是我们对自己原创部分的默认**。一旦课程 / 论文的条款更严格，**以它为准**：
+
+| 课程条款 | 结果 |
+| --- | --- |
+| CC BY 类（如 MIT 6.824 的 CC BY 3.0 US） | 我们的产出可用 CC BY 4.0，但**必须保留上游署名** |
+| CC BY-NC-SA 类（OCW、Composing Programs） | 产出**必须**同样以 CC BY-NC-SA 发布，且**不得商用**（SA 传染） |
+| 未声明许可 / 保留所有权利 | 只发布我们自己独立撰写的讲解，不复制其表达 |
+| **明确不允许传播** | ⛔ **拒绝执行** |
+
+### 11.3 `redistribution` 字段与退出码 3
+
+`course.toml` 的 `[license].redistribution` 与 `papers.toml` 的 `[paper.license].redistribution`
+取 `allowed` / `forbidden` / `unknown`（默认 `unknown`）。
+
+当值为 `forbidden` 时：
+
+- `validate.py` → **退出码 3**，打印明确的拒绝理由，**不跑其余校验**（避免结论被报错淹没）；
+- `build.py` → **退出码 3**，**不产出任何站点**；
+- 因 `deploy.yml` 中 `build` 依赖 `validate`，**部署不会发生**。
+
+**触发范围**：
+
+- **课程级** `forbidden` → 该课程**一切产出**都被拒绝，不区分 `explanation` / `transcript`。
+- **论文级** `forbidden` → 只为**该论文且实际存在页面**时拒绝；登记了一篇禁止传播的论文
+  不会连累整个课程。
+
+**两个刻意的设计选择**：
+
+1. **为什么课程级拒绝连原创讲解也拦？** 法律上，我们独立撰写的概念讲解并不复制对方表达，
+   通常是安全的。但课程既然明确说了「不要传播」，本项目就**选择不做** ——
+   这是**政策**选择，比法律底线更保守，也是「以课程为准」的字面执行。
+2. **为什么用独立的退出码 3？** 让 CI 与人能一眼区分「内容写错了」（1）和
+   「这件事我们不做」（3）。后者反复重试或修改内容都是浪费时间。

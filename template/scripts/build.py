@@ -78,6 +78,48 @@ def paper_allows_translation(paper: dict | None) -> bool:
     return lic.get("verified") is True and lic.get("allows_translation") is True
 
 
+# 退出码 3 = 政策性拒绝（授权明确不允许传播），与 1（内容有错）区分开。
+REFUSED = 3
+
+
+def course_refusal_reason(cfg: dict) -> str | None:
+    lic = cfg.get("license")
+    if not isinstance(lic, dict) or lic.get("redistribution") != "forbidden":
+        return None
+    detail = "；".join(
+        x for x in (str(lic.get("terms", "")).strip(), str(lic.get("evidence_url", "")).strip()) if x
+    )
+    return (
+        '课程授权明确不允许传播（[license].redistribution = "forbidden"）'
+        + (f" —— {detail}" if detail else "")
+    )
+
+
+def paper_refusal_reason(paper: dict, key: str) -> str | None:
+    lic = paper.get("license")
+    if not isinstance(lic, dict) or lic.get("redistribution") != "forbidden":
+        return None
+    ev = str(lic.get("evidence_url", "")).strip()
+    return (
+        f'论文 {key!r} 明确不允许传播（[paper.license].redistribution = "forbidden"）'
+        + (f" —— {ev}" if ev else "")
+    )
+
+
+def abort_refused(reasons: list[str]) -> int:
+    print("", file=sys.stderr)
+    print("⛔ 拒绝构建 —— CourseLingo 不为该课程产出或发布任何内容。", file=sys.stderr)
+    print("", file=sys.stderr)
+    for r in reasons:
+        print(f"   理由：{r}", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("   这是政策性拒绝，不是构建错误：改内容没有用。", file=sys.stderr)
+    print("   本项目遵守「课程规定优先」：课程不允许传播，我们就不做。", file=sys.stderr)
+    print("   见 docs/content-policy.md 与 LICENSE-CONTENT。", file=sys.stderr)
+    print("", file=sys.stderr)
+    return REFUSED
+
+
 # --------------------------------------------------------------------------
 # 行内渲染
 # --------------------------------------------------------------------------
@@ -453,6 +495,11 @@ def main(argv: list[str] | None = None) -> int:
     verified = license_.get("verified") is True
     site_title = course.get("title_zh") or course.get("title") or "CourseLingo"
 
+    # ★ 政策性拒绝优先于一切：课程不允许传播，我们就不做。
+    reason = course_refusal_reason(cfg)
+    if reason:
+        return abort_refused([reason])
+
     terms: dict[str, tuple[str, str]] = {}
     gl_path = root / "glossary.toml"
     if gl_path.exists():
@@ -490,6 +537,18 @@ def main(argv: list[str] | None = None) -> int:
             fm_text, body = split_front_matter(p.read_text(encoding="utf-8"))
             fm = tomllib.loads(fm_text) if fm_text else {}
             paper_pages.append({**fm, "_path": p, "_body": body})
+
+    # ★ 论文级政策性拒绝：只为实际存在页面的论文触发
+    paper_reasons = []
+    for pg in paper_pages:
+        key = str(pg.get("paper", "")) or pg["_path"].parent.name
+        paper = papers_index.get(key)
+        if paper:
+            r = paper_refusal_reason(paper, key)
+            if r:
+                paper_reasons.append(r)
+    if paper_reasons:
+        return abort_refused(paper_reasons)
 
     # 发布前的第二道闸门：即便有人跳过 validate.py，build 也不会渲染未授权的逐字稿。
     blocked = [

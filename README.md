@@ -100,6 +100,17 @@ python template/scripts/build.py --root template --out template/site
 
 ## 授权
 
-代码与文档的授权协议**尚待确定**（见 [ROADMAP.md](./ROADMAP.md) 的待决事项）。
+| 对象 | 协议 |
+| --- | --- |
+| 代码 | **MIT** —— 见 [LICENSE](./LICENSE) |
+| 原创内容（讲解、导读、术语表、配图） | **CC BY 4.0** —— 见 [LICENSE-CONTENT](./LICENSE-CONTENT) |
 
-注意：翻译产物可能属于原课程的衍生作品，其授权须与原始课程许可兼容 —— 这也是为什么我们坚持「不转载原文」的设计。
+两者都是**最宽松**的档位：可自由使用、修改、商用，只需署名。
+
+**但课程规定优先。** 我们自己的协议只覆盖原创部分；课程或论文的条款更严格时以它为准 ——
+例如 MIT 6.824 是 CC BY 3.0 US（我们的产出须保留其署名），而 MIT OCW 是 CC BY-NC-SA 4.0
+（我们的产出必须同样以 CC BY-NC-SA 发布，且不得商用）。
+
+**如果课程明确不允许传播，本项目会拒绝执行**：`course.toml` 里
+`[license].redistribution = "forbidden"` 会让校验与构建以**退出码 3** 明确拒绝，
+不产出任何内容。理由与范围见 [content-policy.md](./docs/content-policy.md)。

@@ -28,6 +28,7 @@ checked_at = ""
 allows_translation = false
 allows_commercial = false
 share_alike = false
+redistribution = "unknown"
 notes = "未核实。核实方法与结论见 docs/paper-licensing.md"
 
 [[paper]]
@@ -47,6 +48,7 @@ checked_at = ""
 allows_translation = false
 allows_commercial = false
 share_alike = false
+redistribution = "unknown"
 notes = "ACM 论文通常由 ACM 持有版权，翻译需走 ACM 的授权流程。见 docs/paper-licensing.md"
 
 [[paper]]
@@ -66,4 +68,5 @@ checked_at = ""
 allows_translation = false
 allows_commercial = false
 share_alike = false
+redistribution = "unknown"
 notes = "未核实。另注意其扩展版（技术报告）与会议版可能适用不同条款"

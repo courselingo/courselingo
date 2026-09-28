@@ -43,6 +43,10 @@ checked_at = ""
 allows_commercial = false
 allows_derivatives = false
 share_alike = false
+# allowed | forbidden | unknown
+# 设为 "forbidden" 表示课程明确不允许传播 —— validate.py / build.py 会以退出码 3
+# 明确拒绝，不产出任何内容。这是政策性拒绝，不是配置错误。
+redistribution = "unknown"
 notes = "尚未核实。核实后请填写 terms / evidence_url / checked_at，并把 verified 改为 true。"
 
 # 按材料类型逐项核实（推荐）。
@@ -89,6 +93,7 @@ PAPERS_TOML = '''# CourseLingo 论文登记表
 # allows_translation = false
 # allows_commercial = false
 # share_alike = false
+# redistribution = "unknown"   # allowed | forbidden | unknown；forbidden = 明确拒绝
 # notes = ""
 '''
 

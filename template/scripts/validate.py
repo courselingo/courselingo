@@ -41,6 +41,11 @@ VALID_MODES = {"explanation", "transcript"}
 VALID_PAPER_MODES = {"guide", "translation"}
 VALID_SOURCE_KINDS = {"notes", "video", "textbook", "slides", "other"}
 PAPERS_DIRNAME = "papers"
+VALID_REDISTRIBUTION = {"allowed", "forbidden", "unknown"}
+
+# 退出码 3 = 政策性拒绝（授权明确不允许传播）。
+# 与 1（内容有错，可以修）区分开：3 表示「这件事我们不做」，改内容是没用的。
+REFUSED = 3
 
 # 疑似整段转载原文的判定阈值
 VERBATIM_MIN_CHARS = 400
@@ -204,6 +209,13 @@ def check_course(cfg: dict, rep: Report) -> None:
         if not str(license_.get("checked_at", "")).strip():
             rep.error("course.toml", "license.verified = true 但 checked_at 为空（须记录核实日期）")
 
+    redistribution = license_.get("redistribution")
+    if redistribution is not None and redistribution not in VALID_REDISTRIBUTION:
+        rep.error(
+            "course.toml",
+            f"[license].redistribution={redistribution!r} 必须是 {sorted(VALID_REDISTRIBUTION)} 之一",
+        )
+
     output = cfg.get("output")
     if not isinstance(output, dict) or output.get("default_mode") not in VALID_MODES:
         rep.error("course.toml", f"[output].default_mode 必须是 {sorted(VALID_MODES)} 之一")
@@ -332,6 +344,12 @@ def check_paper_registry(cfg: dict, rep: Report) -> dict[str, dict]:
                             "papers.toml",
                             f"{key}: license.verified = true 但 {field} 为空（必须可溯源）",
                         )
+            r = lic.get("redistribution")
+            if r is not None and r not in VALID_REDISTRIBUTION:
+                rep.error(
+                    "papers.toml",
+                    f"{key}: [paper.license].redistribution={r!r} 必须是 {sorted(VALID_REDISTRIBUTION)} 之一",
+                )
         index[key] = paper
     return index
 
@@ -348,6 +366,50 @@ def paper_allows_translation(paper: dict | None) -> bool:
     if not isinstance(lic, dict):
         return False
     return lic.get("verified") is True and lic.get("allows_translation") is True
+
+
+def course_refusal_reason(cfg: dict | None) -> str | None:
+    """课程层面是否明确不允许传播。返回理由，或 None。"""
+    lic = (cfg or {}).get("license")
+    if not isinstance(lic, dict):
+        return None
+    if lic.get("redistribution") != "forbidden":
+        return None
+    evidence = str(lic.get("evidence_url", "")).strip()
+    terms = str(lic.get("terms", "")).strip()
+    detail = "；".join(x for x in (terms, evidence) if x)
+    return "课程授权明确不允许传播（[license].redistribution = \"forbidden\"）" + (
+        f" —— {detail}" if detail else ""
+    )
+
+
+def paper_refusal_reason(paper: dict, key: str) -> str | None:
+    """论文层面是否明确不允许传播。"""
+    lic = paper.get("license")
+    if not isinstance(lic, dict):
+        return None
+    if lic.get("redistribution") != "forbidden":
+        return None
+    evidence = str(lic.get("evidence_url", "")).strip()
+    return (
+        f"论文 {key!r} 明确不允许传播（[paper.license].redistribution = \"forbidden\"）"
+        + (f" —— {evidence}" if evidence else "")
+    )
+
+
+def print_refusal(reasons: list[str], where: str) -> None:
+    """打印政策性拒绝。刻意写得毫不含糊 —— 这不是配置错误，是「我们不做」。"""
+    print("", file=sys.stderr)
+    print("⛔ 拒绝执行 —— CourseLingo 不为该课程产出或发布任何内容。", file=sys.stderr)
+    print("", file=sys.stderr)
+    for r in reasons:
+        print(f"   理由：{r}", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("   这是**政策性拒绝**，不是校验报错：改内容没有用。", file=sys.stderr)
+    print("   本项目遵守「课程规定优先」：课程不允许传播，我们就不做。", file=sys.stderr)
+    print(f"   若授权状况确已变化，请更新 {where} 的 redistribution 字段并附上依据。", file=sys.stderr)
+    print("   见 docs/content-policy.md 与 LICENSE-CONTENT。", file=sys.stderr)
+    print("", file=sys.stderr)
 
 
 def check_paper_page(
@@ -526,6 +588,13 @@ def main(argv: list[str] | None = None) -> int:
         if papers_cfg:
             papers_index = check_paper_registry(papers_cfg, rep)
 
+    # ★ 政策性拒绝优先于一切校验：课程不允许传播，我们就不做。
+    #   写在最前面，是为了让输出只有一条明确结论，而不是被一堆校验报错淹没。
+    course_reason = course_refusal_reason(cfg)
+    if course_reason:
+        print_refusal([course_reason], "course.toml")
+        return REFUSED
+
     content_dir = root / "content"
     lectures: list[Path] = []
     paper_pages: list[Path] = []
@@ -544,6 +613,20 @@ def main(argv: list[str] | None = None) -> int:
                 "content/",
                 "没有任何内容（讲座 content/<slug>/index.md 或论文 content/papers/<key>/index.md）",
             )
+
+        # ★ 论文级政策性拒绝：只为**实际存在页面**的论文触发，
+        #   不因为 papers.toml 里登记了一篇无关的「禁止传播」论文就全盘拒绝。
+        paper_reasons = []
+        for p in paper_pages:
+            key = p.parent.name
+            paper = papers_index.get(key)
+            if paper:
+                reason = paper_refusal_reason(paper, key)
+                if reason:
+                    paper_reasons.append(reason)
+        if paper_reasons:
+            print_refusal(paper_reasons, "papers.toml")
+            return REFUSED
 
         seen_lectures: dict[int, str] = {}
         seen_slugs: dict[str, str] = {}
