@@ -1,6 +1,9 @@
 # 配图作业规范 · Figure Spec（可机检）
 
 > 这是**作业规范**，不是设计随想。设计理由见 [diagram-conventions.md](./diagram-conventions.md)。
+>
+> **先看 [figure-audit.md](./figure-audit.md) 决定「这里该不该有图」，**
+> 再回来看本文件决定「怎么画」。顺序反了就会出现「图都合规，但该画的地方空着」。
 > 每条规则都由房规 linter 实际校验过，**照做就能 0 error 0 warning**。
 
 ## 0. 一句话
