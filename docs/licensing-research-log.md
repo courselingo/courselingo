@@ -448,3 +448,86 @@
 > **OCW 的许可是逐页复制的**（与 6.824 只在主页挂徽章相反），所以讲义子页面
 > 单独取证即可成立 —— 这条差异正是陷阱**十**存在的理由，也说明
 > **「徽章挂主页」与「逐页复制」必须分别处理，不能互推**。
+
+---
+
+## 第一梯队剩余三门核实（2026-09-28 · CMU 15-442 / ETH DDCA→CA / UCSD CSE 234）
+
+> 对象：**CMU 15-442/15-642 ML Systems**、**ETH DDCA → Computer Architecture**、**UCSD CSE 234**（+ 备选分类确认）。
+> 方法：**一律抓原始 HTML**（其他站点经 `socks5h://127.0.0.1:7892`；**GitHub raw / api 直连**，走代理反而失败），
+> 失败重试 5–12 次；**二进制（PDF）一律 `curl -o` 直写文件**（见陷阱十八）。
+> 判定表见 `docs/audit/licence-mlsys-15442.md` / `licence-eth-ddca-ca.md` / `licence-ucsd-cse234.md`；
+> 原始证据与讲义文本落在 `_sources/mlsys-15442/`、`_sources/eth-ddca-ca/`、`_sources/ucsd-cse234/`。
+>
+> 陷阱编号承接上一批（该批已用到**十二 / 十三**），本批从**十四**起。
+
+### 结论总表
+
+| 课程 | 判定 | 分级 | 关键逐字证据 | 可发布什么 |
+| --- | --- | --- | --- | --- |
+| **CMU 15-442 / 15-642** | ✅ allowed（带 NC） | **A** | 仓库根 `LICENSE` 第 1 行 `Attribution-NonCommercial 4.0 International`；正文 `Creative Commons Attribution-NonCommercial 4.0 International Public License`；`ShareAlike` **0** 命中、`NoDerivatives` **0** 命中 | 译文 + 双语对照（**非商业** + 署名 + 标注改动），**仅限课程自制材料** |
+| **ETH DDCA → CA** | ✅ allowed（带 NC + **SA**） | **A** | 每个页面页脚：`Except where otherwise noted, content on this wiki is licensed under the following license:` + `rel="license"` → `CC Attribution-Noncommercial-Share Alike 4.0 International` | 译文 + 双语对照（**非商业 + 必须以 CC BY-NC-SA 4.0 发布**），**仅限 wiki 托管的课程自制内容、文字层面** |
+| **UCSD CSE 234** | ⚠️ **内容 `unknown`**（**下修**） | **B** | 仓库根 `LICENSE`：`MIT License` / `Copyright (c) 2024 DSC 204A` / `The website is adapted from UC Berkeley Data Science 8.` / 第二个 `Copyright (c) 2024 Data Science 8`；授权对象是 `the "Software"` | ⛔ 不译、不做双语对照；**只做原创讲解** |
+| **备选确认** | `mlsyscourse` 与 `cse234` **同属「机器学习系统」分类** | — | 路线图 §1.2 | 不要同期双开；**CSE 234 不能充当 A 级翻译位备选** |
+
+**可立即开工 / 只能讲解 / 不做：**
+
+- ✅ **可立即开工**：**CMU 15-442/642**、**ETH DDCA→CA**（各自按上表协议与范围）。
+- ⚠️ **只能原创讲解**：**UCSD CSE 234**（此前误判为全场最宽松的 A 级）。
+- ⛔ **一律不做**：三门课的**作业/Lab 题面与解答**（本项目红线；CSE 234 另有明文禁令）；
+  MLSys 的**三份第三方客座讲义**；MLSys 讲义里**逐字标注 `Adapted from …` 的第三方改编页**；
+  ETH 的**第三方报告/论文/YouTube 视频**，以及**图注点名了来源的图表**。
+
+### 本轮新增的五个陷阱（十四–十八）
+
+| # | 陷阱 | 本轮逐字实例 |
+| --- | --- | --- |
+| **十四** | **PDF 里的 `MIT License` / `Copyright` 命中，通常是内嵌字体许可**（坑九的 PDF 内层版） | MLSys 讲义 01/04、ETH 讲义、CSE 234 讲义全部命中：`© 2018 Microsoft Corporation. All Rights Reserved.`、`This layout logic for Biblical Hebrew is open source software under the MIT License`、`Licensed under the SIL Open Font License, Version 1.1`、`Copyright (c) 1997, 2009 American Mathematical Society`、`Digitized data copyright Monotype Typography, Ltd 1991-1995. All rights reserved.` |
+| **十五** | **坑八的反面陷阱：找到了仓库根 LICENSE，还要看「授权人」与「授权对象」对不对** | CSE 234 的 `LICENSE` 权利人写的是**另一门课** `DSC 204A`，并自述 `The website is adapted from UC Berkeley Data Science 8.`，授予对象是 `the "Software"` ⇒ 它是**网站模板的软件许可**，推不出「讲义/scribe notes 也授权」。GitHub 自身也判它为 `NOASSERTION`（不是 MIT） |
+| **十六** | **BY-NC 的 NC 条件随衍生作品传递**：「无 SA」≠「可以换成我们自己的 CC BY 4.0」 | MLSys 的 CC BY-NC 4.0 没有 SA ⇒ **不必**用同一协议，但译文仍是 Adapted Material，**必须非商业、不得附加限制**。路线图「无 SA ⇒ 我们的产出不必被拖成 CC」须改为「译文须保持非商业；协议建议沿用 CC BY-NC 4.0」 |
+| **十七** | **「Except where otherwise noted」不是客套 —— 讲义内部会逐字点名第三方来源** | ETH `lecture2b/lecture4`：`Image source: Harris and Harris, Digital Design and Computer Architecture, 2nd Ed., p.110.`、`Image source: Patt and Patel, "Introduction to Computing Systems", 2nd ed., page 78.`、`Source: https://dl.acm.org/doi/pdf/10.1145/3445814.3446723`。MLSys `08-ML-parallelization-part1.pdf`：**30 处** `Adapted from Minjia Zhang, DeepSpeed Presentation` |
+| **十八** | **在 PowerShell 里捕获 `curl.exe` 的 stdout 会静默损坏二进制文件** | 症状：`curl -w` 报 1,624,658 B，落盘后 2,879,450 B，随后 `zlib.decompress` 一个流都解不开、抽不出任何文本 —— **看起来像提取器有 bug，实际是下载坏了**。二进制必须 `curl -o <dest>` 直写，并用「本地字节数 == GitHub blob size」+ 头部 `%PDF-` 双重校验 |
+
+> ★ **陷阱十七 的可操作化**：拿一份讲义翻译之前，**先跑来源行扫描**
+> （`Adapted from` / `Slides from` / `Courtesy of` / `Image source` / `Source:` / `Used with permission`），
+> 命中第三方署名的**整页/整组页**与**全部图表**移出翻译范围 —— **不能因为「LICENSE 是 CC BY-NC」就整份照译**。
+
+### 实际抓取与留证（关键条目）
+
+| 目标 | 结果 | 落盘 |
+| --- | --- | --- |
+| `raw.githubusercontent.com/mlsyscourse/mlsyscourse.github.io/main/LICENSE` | **200**，19,342 B（**直连**） | `_sources/mlsys-15442/evidence/mlsys-webrepo-LICENSE.bin` |
+| `…/hao-ai-lab/cse234-w25/main/LICENSE` | **200**，2,182 B（**直连**） | `_sources/ucsd-cse234/evidence/cse234-webrepo-LICENSE.bin` |
+| `api.github.com`（两个课程站仓库 + 组织仓库枚举） | 200（**直连**）；两个站仓库均 `license.spdx_id = NOASSERTION` | `evidence/*-tree.txt` |
+| `mlsyscourse.org/`、`/schedule`、`/materials`、`/logistics`（**走代理**） | 200；许可关键词命中 **0 / 0 / 0 / 1** —— 那 1 处是**被注释掉**的旧版本语：`<!-- Please feel free to reuse any of these course materials … retain any copyright notices … -->` | `_sources/mlsys-15442/evidence/mlsys-course-*.html` |
+| `mlsyscourse/{assignment1,assignment2,assignment-distributed-training,public-notebooks}` 的 `LICENSE` | **真 404**（响应体 14 B `404: Not Found`） | `evidence/mlsys-*-LICENSE.txt` |
+| `mlsyscourse/assignment-tirx-gemm` 的 `LICENSE` | **200**，11,357 B `Apache License Version 2.0` | 同上 |
+| `hao-ai-lab/cse234-w25-PA` 的 `LICENSE` | **真 404** | `ucsd-cse234/evidence/cse234-PA-LICENSE.txt` |
+| ETH 7 个页面（DDCA sp2023 ×4、CA fall2022 ×3）+ 当前实例 3 页 | 全部 **200**；每页 `rel="license"` = **2**、`by-nc-sa/4.0` = **2** | `_sources/eth-ddca-ca/evidence/eth-*.html` |
+| ETH 媒体清单（`lib/exe/fetch.php?media=`） | DDCA sp2023 **92** 条 / CA fall2022 **107** 条 / DDCA sp2026 **84** 条 | `evidence/eth-sp2023-media.txt`、`_sources/_audit/eth-media-links.txt` |
+| CSE 234 渲染页 home / syllabus / schedule | 200，许可关键词 **0 命中** | `ucsd-cse234/evidence/cse234-site-*.html` |
+| 三门课讲义 PDF（11 份） | 200，`%PDF-` 校验通过 | `_sources/<course>/evidence/` |
+
+⚠️ **`000` 与真 `404` 的区分照旧**：所有「无 LICENSE」结论都拿到响应正文 `404: Not Found`（14 B）；
+CSE 234 渲染版 `/assignments/` 多次返回 **`000`（不是 404）**，已改用**源 Markdown**（GitHub 200）替代取证，
+**没有**把 `000` 当作「页面不存在」。
+
+### 与既有结论的差异（必须留档）
+
+| 既有结论（`course-selection.md`） | 本轮实测 | 处理 |
+| --- | --- | --- |
+| CSE 234「**MIT License**（无 NC、无 SA、**可商用**），A 级 + 第一顺位备选」 | LICENSE 授权人是 `DSC 204A`、对象是 `the "Software"`、自述 `The website is adapted from UC Berkeley Data Science 8.` ⇒ **课程内容无许可** | ⚠️ **下修为 B 级（仅原创讲解）**；**该修正需同步写回 `course-selection.md`（不在本次写入范围内）** |
+| MLSys「无 SA ⇒ **我们的产出不必被拖成 CC**」 | 无 SA 正确，但 **NC 随衍生作品传递** | ⚠️ 改为：译文须**非商业**，协议建议沿用 **CC BY-NC 4.0** |
+| MLSys「作业在三个独立仓库本轮未核」 | 已核：**3 个 404 + 1 个 Apache-2.0** | ✅ 闭环（作业仍按不产出处理） |
+| ETH「wiki 内容 A 级；客座材料须逐件复核」 | 已复核：**图注逐字点名商业教材与第三方 URL**；另发现 **`/digitaltechnik/` 根路径现指向 spring2026 实例**（版本漂移） | ✅ 细化为：**文字可译、图一律不用、第三方报告/论文排除**；取材料必须写版本前缀 |
+| MLSys「slides 在网站仓库内，随 CC BY-NC」 | 正确，但 `slides/` 里**混放 3 份未列入排期的第三方客座讲义**（ByteDance Seed / Tim Dettmers / Zihao Ye, UW & NVIDIA） | ✅ 新增排除项：**不在 `_data/lectures.yml` 与 schedule 链接里的 PDF，一律视为第三方遗留文件** |
+
+### 仍未核实（诚实清单）
+
+| # | 未核实项 | 缺什么 |
+| --- | --- | --- |
+| 1 | MLSys 其余 12 份讲义的第三方改编页比例 | 取用时按陷阱十七逐份扫描（`08` 已确认 30 处） |
+| 2 | ETH 助教材料 `ataberk-*` / `kanellok-*` 的内部来源声明 | 逐件扫描（本轮抽了 5 份 Onur 讲义） |
+| 3 | CSE 234 scribe notes 的 Overleaf 模板是否含贡献者授权条款 | 模板在 Overleaf，未取回 |
+| 4 | CSE 234 同组织其他学期实例（`dsc204a-w24` / `dsc204a-f25`） | 本轮只核 `cse234-w25` |
+| 5 | MLSys 的 CC 授权文本**未逐字列举**覆盖哪些文件 | 覆盖范围来自「LICENSE 置于仓库根」这一仓库级事实；如需更强依据，发信维护者确认 |

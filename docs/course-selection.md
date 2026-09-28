@@ -79,7 +79,7 @@
 
 | # | 坑 | 本轮实例 |
 | --- | --- | --- |
-| **八** | **GitHub Pages 类课程站，许可写在源码仓库的 `LICENSE` 里，页面本身一个字都没有。** 只抓页面 = 100% 假阴性 | **CSE 234**（`hao-ai-lab/cse234-w25` 根 `LICENSE` = **MIT**）与 **CMU 15-442/642**（`mlsyscourse.github.io` 根 `LICENSE` = **CC BY-NC 4.0**）**两条 A 级结论都是这样挖出来的** |
+| **八** | **GitHub Pages 类课程站，许可写在源码仓库的 `LICENSE` 里，页面本身一个字都没有。** 只抓页面 = 100% 假阴性 | **CMU 15-442/642**（`mlsyscourse.github.io` 根 `LICENSE` = **CC BY-NC 4.0**）**两条 A 级结论都是这样挖出来的** |
 | **九** | 页面上出现的「MIT License」经常**不是**课程许可，而是模板自带的**图标库注释** | CS168 课程站命中 `MIT` 2 次 / `license` 4 次，逐字看全是 `<!-- Feather. MIT License … -->`、`<!-- Bootstrap Icons. MIT License … -->`；CS61B 同款。**这两门课的「MIT 命中数」一个都不能用**（既有结论里 CS 61A 也是同一现象） |
 | **十** | OCW 的许可是**逐页复制**的；6.824 的徽章**只在主页**。两者不能互推 | OCW 6.006 / 6.858 的**课程页与讲义页**都带 `"license": "https://creativecommons.org/licenses/by-nc-sa/4.0/"`；而 6.824 讲义 0/0/0 |
 | **十一** | 「有 CC 徽章」≠「可以做翻译」：**ND（NoDerivatives）明文禁止翻译** | MIT 6.1600 的 notes 仓库是 **CC BY-NC-ND 4.0**（既有结论）⇒ 该材料的**翻译路线被直接禁止**。这是开放许可里最反直觉的一类 |
@@ -95,7 +95,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | **CS168: Introduction to the Internet** | 计算机网络 | UC Berkeley | 英文 | ✅ **教材 CC BY-SA 4.0**（无 NC）；**课程站未声明** | <https://textbook.cs168.io/> · <https://sp25.cs168.io/> | **A（教材）** 译文＋原文对照，**可商用**，须 BY-SA；课程站按 B | **P0** |
 | **CMU 15-442/15-642 ML Systems** | 机器学习系统 | CMU | 英文 | ✅ **CC BY-NC 4.0**（网站仓库根 LICENSE，无 SA） | <https://raw.githubusercontent.com/mlsyscourse/mlsyscourse.github.io/main/LICENSE> | **A** 译文＋原文对照（非商业、署名；**不传染**） | **P0** |
-| **CSE 234: ML Systems / LLM Systems** | 机器学习系统 | UCSD | 英文 | ✅ **MIT License**（网站仓库根 LICENSE） | <https://raw.githubusercontent.com/hao-ai-lab/cse234-w25/main/LICENSE> | **A** 译文＋原文对照（**无 NC、无 SA，可商用**） | **P0** |
+| **CSE 234: ML Systems / LLM Systems** | 机器学习系统 | UCSD | 英文 | ⚠️ **B 级**：仓库根 LICENSE 的对象是 **"the Software"**（权利人写 `DSC 204A`，自述 "The website is adapted from UC Berkeley Data Science 8."）⇒ **网站模板的软件许可，非课程内容许可**；课程内容 0 声明，GitHub 自身判 `NOASSERTION` | <https://raw.githubusercontent.com/hao-ai-lab/cse234-w25/main/LICENSE> | **A** 译文＋原文对照（**无 NC、无 SA，可商用**） | **P0** |
 | **MIT 6.006 Introduction to Algorithms** | 数据结构与算法 | MIT（OCW） | 英文 | ✅ **CC BY-NC-SA 4.0**（课程页＋讲义页双重出现） | <https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/> | **A** 译文＋原文对照（NC＋SA） | **P0** |
 | **DDCA: Digital Design and Computer Architecture** | 体系结构 | ETH Zurich | 英文 | ✅ **CC BY-NC-SA 4.0**（wiki 的 start / lectures / schedule 三页一致） | <https://safari.ethz.ch/digitaltechnik/spring2023/> | **A（wiki 内容）** 译文＋原文对照（NC＋SA）；⚠️ YouTube 视频不做 | **P0** |
 | **CA: Computer Architecture** | 体系结构 | ETH Zurich | 英文 | ✅ **CC BY-NC-SA 4.0**（同上，同一 DokuWiki 许可块） | <https://safari.ethz.ch/architecture/fall2022/doku.php?id=schedule> | **A（wiki 内容）** 同 DDCA；⚠️ 客座讲者材料须逐件复核 | **P0** |
@@ -201,7 +201,7 @@
 | 2 | MIT 6.006 | 受众最大（算法入门），许可链条最干净（课程页＋讲义页双重取证） |
 | 3 | CMU 15-442 | 最热方向 × **无 SA**（不污染我们的发布协议）× 与 6.824 能力协同 |
 | 4 | ETH DDCA→CA | 中文空白 × 系统纵深 × 许可核到材料页 |
-| 备 1 | **CSE 234** | **MIT License（许可最宽松：无 NC、无 SA、可商用）**；因与第 3 项同属「机器学习系统」而暂列 §4，**一旦第 3 项的 NC 约束影响商业化，立即顶上** |
+| ~~备 1~~ | ~~**CSE 234**~~ | ❌ **已作废（2026-09-28 深读 LICENSE 后下修为 B 级）**：LICENSE 的对象是 "the Software"、权利人写 `DSC 204A` ⇒ 那是**网站模板的软件许可**，课程内容 0 声明。**它不能顶上**，也不再是「许可最宽松」的一项。详见 `licensing-research-log.md` |
 
 ---
 
@@ -211,7 +211,7 @@
 
 | 课程 | 授权 | 暂缓理由（不是许可问题） |
 | --- | --- | --- |
-| **UCSD CSE 234** | **MIT License** | 与第一梯队 3.3 **同分类**，避免同期双开；但它是全场**许可最宽松**的一项，且 csdiy 标注 120 小时、含 Triton/FlashAttention/推理系统等热点 ⇒ **第一顺位备选** |
+| ~~UCSD CSE 234~~ | ❌ **B 级（仅原创讲解）** | **下修理由**：仓库根 LICENSE 授予的是 `"the Software"`、权利人 `DSC 204A`，属**网站模板的软件许可**，不覆盖课程内容；课程内容 0 声明 ⇒ 按 `unknown` 只能做原创讲解。它与第一梯队 3.3 同分类，两者**不同期双开** |
 | **MIT 6.046J** | CC BY-NC-SA 4.0 | 与 6.006 同许可、同义务，**建议与 6.006 打包成「算法双课」**，一次讲清 NC＋SA 的落地方式 |
 | **MIT 6.858** | CC BY-NC-SA 4.0 | 材料完整（讲义页 25 行），但属**系统安全**分类（非本轮优先分类） |
 | **MIT 6.828** | CC BY-NC-SA 4.0 | ⚠️ 版本为 **2012**，内容偏旧；且我们已有 6.1810/6.S081 在飞。页面显式标注部分第三方图片**被排除在 CC 许可之外** |
@@ -255,7 +255,7 @@ Nand2Tetris 授权原文（逐字，来自其**专门的许可页**）：
 | --- | --- | --- | --- |
 | 1 | **CS168 课程站其余材料**（讲义、三个项目、discussion） | 主页与 `/policies/` 均 0 命中（`license` 的命中全是图标库注释）；`/projects/` 取回 404 | 课程站**没有任何许可声明**；教材的 BY-SA 是否被课程站承接，**无依据**。⇒ 课程站按 B 级处理，除非找到书面依据 |
 | 2 | **`mlsyscourse/assignment1`、`assignment-distributed-training`、`assignment-tirx-gemm`** | 未抓取 | 三个作业仓库各自的 LICENSE；课程站的 CC BY-NC 4.0 是否覆盖它们 |
-| 3 | **CSE 234 的作业材料** | 网站仓库根 `LICENSE` = MIT License；`/assignments/` 页面 0 命中 | 作业是否托管在**另一个仓库**（若在网站仓库内，则随 MIT）；以及 `LICENSE` 里的 "Copyright (c) 2024 DSC 204A" 与 CSE 234 的对应关系 |
+| 3 | ~~**CSE 234 的作业材料**~~ | ✅ **已结案（2026-09-28）**：仓库根 `LICENSE` 的对象是 `"the Software"`、权利人写 `DSC 204A` ⇒ 那是**网站模板的软件许可**，不覆盖课程内容；课程内容 0 声明（GitHub 自身判 `NOASSERTION`）；PA 仓库 LICENSE 是**真 404** 且**明文禁发解答** ⇒ 该课整体下修为 **B 级（仅原创讲解）** |
 | 4 | **ETH wiki 上「otherwise noted」的客座讲者材料** | 确认 wiki 许可块在三页一致 | 逐个文件是否有独立声明（例：`adeeperlookintorowhammer_micro21-talk.pdf`、`2022.11.25_sibyl_before.pdf`） |
 | 5 | **SEED Labs**（系统安全，csdiy 收录） | 站点与实验室索引页仅有 `Copyright © Wenliang Du, wedu@acm.org`，**0 处许可措辞** | 具体 lab 文档（PDF/网页）是否另有 CC 声明 —— **站点无声明不等于 lab 无声明**（CS 144 就是这样被漏掉的） |
 | 6 | **OSTEP《Operating Systems: Three Easy Pieces》教材**（csdiy 的 NJUOS 页把它列为课程教材，`pages.cs.wisc.edu/~remzi/OSTEP/`） | 该页 **11 项关键词全部 0 命中** | 章节 PDF 内页是否含许可声明；网上常见「OSTEP 是 CC 授权」的说法**本轮未取到证据，不得引用** |
@@ -346,7 +346,7 @@ Copyright © <2021> <copyright Yinmin Zhong>
 2. 我们的发布协议必须**按来源分层**：代码 MIT / 原创内容 CC BY 4.0（[content-policy.md](./content-policy.md)）；
    一旦改编了 NC 或 SA 材料，**该仓库的产出必须按上游条款发布**。
    **一课程一仓库的隔离设计正是为此而存在** —— 本路线图的第一梯队里既有 BY-SA（CS168）、
-   BY-NC（15-442）、MIT（CSE 234）、也有 BY-NC-SA（OCW / ETH），**这四类绝不能混进同一个仓库**。
+   BY-NC（15-442）、BY-NC-SA（OCW / ETH）—— **这些类不能混进同一个仓库**。（CSE 234 原按 MIT 计，现已下修为 B 级、不产出译文。）
 3. 任何一次「引用」，都要能回答：**我引用的是它的清单，还是它的内容？** 前者 MIT 覆盖，后者不覆盖。
 
 ---
@@ -355,7 +355,7 @@ Copyright © <2021> <copyright Yinmin Zhong>
 
 | 强度 | 含义 | 本文件中的例子 |
 | --- | --- | --- |
-| **已核实** | 抓取了确有该措辞的页面，留了逐字引用与 URL | CS168 教材 CC BY-SA 4.0；15-442 的 CC BY-NC 4.0；CSE 234 的 MIT License；OCW 五门；ETH 两门；Nand2Tetris；CS162 的禁止传播条款；CS170 的 UC 版权行；Algo 的 All rights reserved |
+| **已核实** | 抓取了确有该措辞的页面，留了逐字引用与 URL | CS168 教材 CC BY-SA 4.0；15-442 的 CC BY-NC 4.0；OCW 五门；ETH 两门；Nand2Tetris；CS162 的禁止传播条款；CS170 的 UC 版权行；Algo 的 All rights reserved |
 | **推断** | 由已核实事实推出的行为建议，**不是**许可结论 | 「A 级可做译文」；工时估算；优先级排序 |
 | **头脑风暴** | 未取证的判断，明确标出 | 「一旦 NC 影响商业化，CSE 234 顶上」这类策略设想 |
 | **未确认** | 查过但没拿到依据，见 §5 | CS168 课程站；三个 mlsyscourse 作业仓库；SEED Labs 的 lab 文档；OSTEP；KAIST CS420 的 `LICENSE` |
