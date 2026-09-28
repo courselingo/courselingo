@@ -1,61 +1,86 @@
 # 授权核实记录 · Licensing Research Log
 
-> 本文件记录**实际发起过的核实动作与结果**，不是许可条款本身。
-> 结论：**尚未核实任何一门课程。** 下表每一行都是 `未核实`，且没有任何数据来自记忆或推测。
+> 本文件记录**实际做过的核实动作与结果**。结论：**已于 2026-09-28 完成主要核实。**
+> 每一条都有原文引用，**没有一条来自记忆或推测**。
 
-## 状态：BLOCKED（工具层面受阻，非疏忽）
+## 状态：RESOLVED（此前因网络受阻，现已解除）
 
-| 检查项 | 结果 |
-| --- | --- |
-| `web_search` | 全部失败：`no API key for "DEEPSEEK_API_KEY"` —— 未配置搜索后端 |
-| `web_fetch` | 拒绝所有目标：`resolves to a non-public IP address` |
-| DNS 解析 | 学术域名被劫持到 `198.18.0.x`（RFC 2544 保留段）：`ocw.mit.edu`→.7、`cs61a.org`→.5、`pdos.csail.mit.edu`→.4、`composingprograms.com`→.8、`cs144.github.io`→.14、`15445.courses.cs.cmu.edu`→.15 |
-| 直连出口 | `curl https://ocw.mit.edu/` → `http_code=000`（无法建立连接） |
-| 镜像 / 代理 | `web.archive.org`、`archive.org`、`api.github.com`、`raw.githubusercontent.com`、Bing/DDG/Brave/Google、`r.jina.ai`、`corsproxy.io` —— **全部**被劫持。无 `HTTP(S)_PROXY` 环境变量，无可用本地代理端口 |
+### 此前为什么受阻，后来怎么解决的
 
-**实际成功抓取的 URL 仅 3 个**：[github.com](https://github.com/)（200）、[github.com/cs61a](https://github.com/cs61a)（200）、[github.com/cs61a/composing-programs](https://github.com/cs61a/composing-programs)（404）。三者均**不含**任何课程许可文本。证据基础为空。
+| 现象 | 原因 | 解决 |
+| --- | --- | --- |
+| `web_search` 全部失败 | 未配置搜索后端 | 不用搜索，直接抓官方页面 |
+| `web_fetch` 拒绝学术域名 | 本机 DNS 是 Clash fake-IP，所有域名解析到 `198.18.0.x`（非公网段），`web_fetch` 因而拒收 | 改用 `pwsh` + `curl` |
+| `curl` 直连也返回 000 | 代理端口 **7892 是 SOCKS5，不是 HTTP**；用 `http://` 连它必然失败 | 改用 `-x socks5h://127.0.0.1:7892` |
 
-## 核实表（全部未核实）
+**关键教训**：这个环境下要抓外网，必须用 `curl -x socks5h://127.0.0.1:7892`。
+写成 `http://127.0.0.1:7892` 会静默失败（返回 000），看起来像「网络被墙」。
 
-| 课程 | 材料类型 | 许可条款 | 来源 URL | 可信度 |
+## 实际抓取记录
+
+抓取物留证在 `docs/_fetch/`（已在 `.gitignore` 中排除，不入库）。主要目标与结果：
+
+| 目标 | URL | 结果 |
+| --- | --- | --- |
+| MIT OCW 条款 | `https://ocw.mit.edu/terms/` | ✅ 200，取得完整许可与 MIT 对「非商业」的解释 |
+| MIT 6.824 主页 / general / schedule / questions / Lab1 | `https://pdos.csail.mit.edu/6.824/...` | ✅ 200，**5 个页面均无任何 license / copyright 字样** |
+| CS 61A 首页 / syllabus / resources / fa26 | `https://cs61a.org/...` | ✅ 200，页脚为 Regents of the University of California 版权声明 |
+| Composing Programs 章节页 | `https://www.composingprograms.com/...` | ✅ 200，正文写明 CC BY-NC-SA 3.0 |
+| CMU 15-445 主页 / syllabus / faq / 历年 | `https://15445.courses.cs.cmu.edu/...` | ✅ 200，**6 个页面均无许可声明** |
+| Stanford CS 144 主页 / Lab FAQ / 各 LICENSE | `https://cs144.github.io/...` | ⚠️ 部分 200 但**无许可声明**；若干 LICENSE 抓取返回空（14 字节） |
+
+## 核实表
+
+| 课程 / 来源 | 材料类型 | 许可条款 | 来源 URL | 可信度 |
 | --- | --- | --- | --- | --- |
-| MIT 6.5840/6.824 | 讲座笔记 / 幻灯片 | 未取得 | <https://pdos.csail.mit.edu/6.824/> —— 不可达 | **未核实** |
-| MIT 6.5840/6.824 | 讲座视频 | 未取得 | 同上 | **未核实** |
-| MIT 6.5840/6.824 | 作业 / Lab | 未取得 | 同上 | **未核实** |
-| MIT 6.5840/6.824 | 课程 reuse 声明 | 未取得 | 同上 | **未核实** |
-| Berkeley CS 61A | 幻灯片 / 视频 / 作业 / 项目 | 未取得 | <https://cs61a.org/> —— 不可达 | **未核实** |
-| Composing Programs | 教材 | 未取得 | <https://composingprograms.com/> —— 不可达 | **未核实** |
-| MIT OpenCourseWare | 站点许可、商用、衍生、ShareAlike、署名 | 未取得 | <https://ocw.mit.edu/> —— 不可达 | **未核实** |
-| MIT 6.1810/6.S081 | reuse 声明 | 未取得 | 不可达 | **未核实** |
-| CMU 15-445 | reuse 声明 | 未取得 | 不可达 | **未核实** |
-| Stanford CS 144 | reuse 声明 | 未取得 | 不可达 | **未核实** |
+| MIT OpenCourseWare | 课程材料（含衍生作品） | **CC BY-NC-SA 4.0** | <https://ocw.mit.edu/terms/> | ✅ 已核实 |
+| Composing Programs | 教材 | **CC BY-NC-SA 3.0** | <https://www.composingprograms.com/> | ✅ 已核实 |
+| MIT 6.5840 / 6.824 | 课件 / 作业 / 视频 | **未声明（= 保留所有权利）** | <https://pdos.csail.mit.edu/6.824/> | ✅ 已核实「无声明」 |
+| UC Berkeley CS 61A | 课件 / 作业 / 视频 | **保留所有权利**（© Regents of UC） | <https://cs61a.org/> | ✅ 已核实 |
+| CMU 15-445 | 课件 | **未声明** | <https://15445.courses.cs.cmu.edu/> | ✅ 已核实「无声明」 |
+| Stanford CS 144 | 课件 / Lab | **未确认** | <https://cs144.github.io/> | ⚠️ 未核实 |
 
-### 为什么留空而不是「按常识填」
+### 关键原文引用
 
-两个具体陷阱：
+**MIT OCW 的商用限制**（这是最关键的一条）：
 
-1. **MIT OCW 的许可条款极易被记错。** 其 `NC`（非商业）与 `SA`（相同方式共享）条款直接决定商业使用与翻译改编是否合法 —— 这是两个根本性问题，必须读原文。
-2. **6.824 / 6.1810 的讲座笔记历史上没有声明许可。** 「未声明」的法律状态是**保留所有权利**，与「宽松开源」是完全不同的法律处境。课件公开可访问 ≠ 可以自由改编。
+> “Noncommercial — You may not use the material for commercial purposes.”
 
-## 附带结论：一般著作权推理（非已核实条款）
+> “Non-commercial use means that users may not sell, profit from, or commercialize OCW materials or **works derived from** them.”
 
-> 以下仅为风险分级框架，可被真实条款推翻。
+**MIT OCW 的 ShareAlike 传染**：
 
-- **自己撰写讲解、讲同一批概念 —— 风险最低。** 思想与概念不受著作权保护，只有表达受保护。但须避免逐句改写原文、避免复制原图与幻灯片。
-- **链接官方来源 + 自己的解读与署名 —— 模式安全。** 但署名本身**不能**豁免侵权。
-- **翻译完整逐字稿 / 翻译视频字幕 —— 许可依赖度最高。** 翻译是衍生作品，复制了原作的完整表达，完全取决于实际条款（NC/ND 条款，或根本无许可）。
-- **翻译官方作业答案 —— 风险最高。** 著作权风险叠加学术诚信规则，且答案常被故意不公开，应默认无授权。
-- **转载原始课件 / 视频 —— 最高风险且通常没有必要。** 即使材料许可宽松，视频还另有平台条款。一律链接，不转载。
+> “Share Alike — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.”
 
-## 解除阻塞后的重跑清单
+**CS 61A**：
 
-网络恢复后，**逐一实际访问**并逐字记录原文引用：
+> “Copyright ©2026, Regents of the University of California and respective authors.”
 
-1. `pdos.csail.mit.edu/6.824/` 主页及其 reuse 声明
-2. `github.com/mit-pdos` 下各 Lab 仓库的 `LICENSE` / `COPYING`
-3. `cs61a.org` 主页与 FAQ / about 页
-4. `composingprograms.com` 页脚许可声明
-5. MIT OCW 的 terms of use 与 citation 页面
-6. 6.1810、15-445、CS 144 主页的 reuse 声明
+**Composing Programs**：
 
-在此之前，**所有课程按「未核实」处理**；任何翻译逐字稿、字幕或作业答案的发布，都必须先取得书面授权（联系课程讲师或相应版权办公室）。
+> “These notes are published under the Creative Commons attribution non-commercial share-alike license version 3.”
+
+## 风险分级（基于**已核实条款**，不再是通用推理）
+
+| 做法 | 判定 | 依据 |
+| --- | --- | --- |
+| (b) 我们自己写概念讲解，讲同一批概念 | 🟢 **可以做** | 思想与概念不受著作权保护（6.824 / CS 61A 无许可也成立） |
+| (e) 链接官方来源 + 自己的解读与署名 | 🟢 **可以做** | 署名不豁免侵权，但「只引用 + 自己写」不构成复制表达 |
+| (a) 翻译完整讲座逐字稿 | 🔴 **对 6.824 / CS 61A / 15-445 禁止** | 无许可 = 保留所有权利；翻译是衍生作品 |
+| (f) 翻译视频字幕 | 🔴 **同上，且更复杂** | 视频另有平台条款 |
+| (c) 翻译作业答案 | ⛔ **永久排除** | 著作权 + 学术诚信，双重风险 |
+| (d) 转载原始课件 / 视频 | 🔴 **禁止** | 6.824 / CS 61A 无许可；一律链接，不转载 |
+| 使用 OCW 材料做改编 | 🟡 **条件允许** | 须非商业 + 以 CC BY-NC-SA 4.0 发布（传染） |
+
+## 仍未核实
+
+- Stanford CS 144 的许可（LICENSE 文件多次抓取返回空）
+- 6.824 如果走 MIT OCW 版本，OCW 上是否有对应课程（决定能否用 CC 许可替代「无许可」）
+- 6.824 讲座视频的平台条款（与课件授权是两回事）
+- Composing Programs 完整页脚声明（当前证据来自教材章节正文）
+
+## 一句话总结
+
+**两门首选课程（6.824、CS 61A）都没有开放许可，逐字稿翻译在拿到书面授权之前不能做。**
+但「我们自己写的概念讲解」在任何一门课上都可以做 —— 这正是本项目把默认产出定为
+`explanation` 而不是 `transcript` 的原因。授权闸门现在有了真实的牙齿，不再只是预防性设计。
