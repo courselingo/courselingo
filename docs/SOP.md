@@ -568,6 +568,26 @@ output_mode = "guide"
 - [ ] 复核者与译者**不是同一人**（译文尤其不能自审）
 - [ ] 复核意见落到**行号 + 原句 + 最小修改建议**，不允许「再打磨一下」
 
+### 配图（每章 / 每篇 **≥3 幅**）
+
+**硬性下限：每一章讲座、每一篇论文导读，配图不得少于 3 幅。**
+
+- 图一律**手绘 SVG** —— 不是 Mermaid，也不是截图。单一浅色底、中文标签居中。
+- 作业规范（调色板、几何数值、常见报错对照表）：[figure-spec.md](./figure-spec.md)
+- 交付前必须过房规 linter，**0 error 且 0 warning**：
+
+  ```bash
+  python scripts/check_figures.py --strict
+  ```
+
+- 图放在**本页目录**的 `figures/` 下，正文用相对路径引用：`![alt](figures/xxx.svg)`。
+- 每幅图**前有一句引出、后有一句解读**，不允许图孤零零挂着。
+- `alt` 要能替代图片传达信息（≤60 字），不写「示意图」。
+- 论文导读的配图必须是**我们自己的抽象**，**不复刻论文原图** —— 原图版权在出版社，
+  见 [paper-licensing.md](./paper-licensing.md)。
+- 房规工具已 vendor 进每个课程仓库（`tools/svg-lint/`，MIT，含上游 LICENSE）；
+  品牌色登记在 `lib/palette.mjs` 末尾，是**唯一**的上游改动。
+
 ---
 
 ## 6. 阶段 ⑤ 校验
