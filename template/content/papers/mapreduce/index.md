@@ -10,7 +10,9 @@ output_mode = "guide"
 > 本篇用我们自己的话讲清楚 MapReduce 这篇论文要解决什么问题、怎么解的、代价是什么。
 > 不是原文的逐句对照，也不包含原文段落。
 >
-> 原始论文见 [papers.toml](../../papers.toml) 中的 `mapreduce` 条目。
+> 原始论文见本仓库 `papers.toml` 中的 `mapreduce` 条目。
+> （这里**不写成相对链接**：`papers.toml` 是仓库构建文件、不在站点里，
+> 相对链接会让 MkDocs 的链接检查失败，`--strict` 下直接中断构建。）
 
 ## 这篇论文要解决什么问题
 
