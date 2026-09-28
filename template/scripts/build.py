@@ -317,20 +317,34 @@ def page(
     base: str,
     banner: str,
     footer_note: str,
+    logo_html: str = "",
+    has_favicon: bool = False,
+    has_logo: bool = False,
 ) -> str:
     full_title = f"{page_title} · {site_title}" if page_title else site_title
+    favicon = (
+        f'\n<link rel="icon" type="image/png" href="{base}assets/favicon.png">'
+        f'\n<link rel="apple-touch-icon" href="{base}assets/favicon.png">'
+        if has_favicon else ""
+    )
+    # 必须用本页的 base 拼路径：论文页在两层目录下，写死根路径会 404
+    if has_logo:
+        logo_html = (
+            f'<span class="brand-logo">'
+            f'<img src="{base}assets/logo.png" alt="" width="24" height="24"></span>'
+        )
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(full_title)}</title>
-<meta name="description" content="{html.escape(description, quote=True)}">
+<meta name="description" content="{html.escape(description, quote=True)}">{favicon}
 <link rel="stylesheet" href="{base}assets/style.css">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="{base}index.html">{html.escape(site_title)}</a>
+  <a class="brand" href="{base}index.html">{logo_html}{html.escape(site_title)}</a>
   <span class="badge">非官方 · 社区项目</span>
 </header>
 {banner}
@@ -406,7 +420,10 @@ body {
   padding: .9rem 1.25rem; border-bottom: 1px solid var(--border);
   position: sticky; top: 0; background: var(--bg); z-index: 10;
 }
-.brand { font-weight: 700; color: var(--fg); text-decoration: none; letter-spacing: .01em; }
+.brand { font-weight: 700; color: var(--fg); text-decoration: none; letter-spacing: .01em; display: inline-flex; align-items: center; gap: .55rem; }
+/* 透明 logo 放在白色小底片上：明暗两种主题下都清晰（实测蓝色在深色底上只有 2.2:1） */
+.brand-logo { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px; background: #ffffff; border: 1px solid var(--border); flex: 0 0 auto; }
+.brand-logo img { width: 24px; height: auto; display: block; }
 .badge {
   font-size: .72rem; color: var(--muted); border: 1px solid var(--border);
   border-radius: 999px; padding: .1rem .55rem;
@@ -590,6 +607,17 @@ def main(argv: list[str] | None = None) -> int:
     (out_dir / "assets").mkdir(parents=True, exist_ok=True)
     (out_dir / "assets" / "style.css").write_text(CSS, encoding="utf-8")
 
+    # 站点图标与 logo（取自仓库的 assets/；缺失时静默降级为纯文字品牌名，不报错）
+    src_assets = root / "assets"
+    if src_assets.is_dir():
+        for name in ("logo.png", "logo-square.png", "logo-avatar.png",
+                     "favicon.png", "favicon-32.png"):
+            f = src_assets / name
+            if f.exists():
+                shutil.copy2(f, out_dir / "assets" / name)
+    has_favicon = (out_dir / "assets" / "favicon.png").exists()
+    has_logo = (out_dir / "assets" / "logo.png").exists()
+
     banner = ""
     if not verified:
         banner = (
@@ -631,7 +659,7 @@ def main(argv: list[str] | None = None) -> int:
         page(
             site_title=site_title, page_title="", description=str(course.get("title", "")),
             body_html=home_body, nav_html=nav_for(lectures, paper_pages, None, base),
-            base=base, banner=banner, footer_note=footer_note,
+            base=base, banner=banner, footer_note=footer_note, has_logo=has_logo, has_favicon=has_favicon,
         ),
         encoding="utf-8",
     )
@@ -659,7 +687,7 @@ def main(argv: list[str] | None = None) -> int:
                 description=f'{lec.get("title")} — {site_title}',
                 body_html=head + meta + draft + body_html,
                 nav_html=nav_for(lectures, paper_pages, slug, base),
-                base="../", banner=banner, footer_note=footer_note,
+                base="../", banner=banner, footer_note=footer_note, has_logo=has_logo, has_favicon=has_favicon,
             ),
             encoding="utf-8",
         )
@@ -716,7 +744,7 @@ def main(argv: list[str] | None = None) -> int:
                 description=f'{pg.get("title")} — {site_title}',
                 body_html=head + pmeta + licnote + draft + body_html,
                 nav_html=nav_for(lectures, paper_pages, key, base),
-                base="../../", banner=banner, footer_note=footer_note,
+                base="../../", banner=banner, footer_note=footer_note, has_logo=has_logo, has_favicon=has_favicon,
             ),
             encoding="utf-8",
         )
@@ -739,7 +767,7 @@ def main(argv: list[str] | None = None) -> int:
         page(
             site_title=site_title, page_title="术语表", description="课程术语表",
             body_html=gl_body, nav_html=nav_for(lectures, paper_pages, None, base),
-            base="../", banner=banner, footer_note=footer_note,
+            base="../", banner=banner, footer_note=footer_note, has_logo=has_logo, has_favicon=has_favicon,
         ),
         encoding="utf-8",
     )

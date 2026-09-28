@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-avatar.png">
+  <img src="assets/logo.png" alt="CourseLingo 课语 · 译课 AI" width="132">
+</picture>
+
 # CourseLingo · 译课 AI
 
 **AI-powered translation & explanation for classic CS courses.**
@@ -97,6 +102,22 @@ python template/scripts/build.py --root template --out template/site
 - [贡献指南](https://github.com/courselingo/.github/blob/main/CONTRIBUTING.md)
 - [内容策略](./docs/content-policy.md)
 - [架构设计](./docs/architecture.md)
+
+## 品牌资源
+
+`assets/` 下是本项目的 logo，随 `template/assets/` 复制进每个课程仓库，`build.py` 会自动把它们
+放进站点（页头 logo + favicon）。
+
+| 文件 | 用途 |
+| --- | --- |
+| `logo.png` | **浅色底**用（透明通道，已裁掉留白） |
+| `logo-avatar.png` | **GitHub 组织头像**（浅色实底，**圆形容器裁切安全**） |
+| `logo-square.png` | 正方形实底场合 |
+| `favicon.png` | 站点图标 |
+
+**为什么有两个版本**：实测主蓝 `#0040c0` 在白色上对比度 8.4:1（清晰），在深色上只有 2.2:1（看不清）。
+这个 logo 是为浅色背景设计的 —— 所以站点页头把透明 logo 放在一张白色小底片上，
+README 则用 `<picture>` 按主题切换。详见 [brand.md](./docs/brand.md#logo-资源)。
 
 ## 授权
 
