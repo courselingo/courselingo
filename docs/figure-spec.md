@@ -10,15 +10,26 @@
 
 ## 1. 交付前必须跑的命令
 
-```bash
-node tools/svg-lint/bin/svg-lint.mjs content/<你的页面目录>/figures/*.svg
+**PowerShell 不会替原生命令展开通配符** —— 直接写 `...\figures\*.svg` 会让 CLI
+拿到字面量 `*.svg` 并以 ENOENT 退出（退出码 2）。必须显式展开：
+
+```powershell
+# ✅ 推荐：交给封装脚本，它自己枚举文件
+python scripts/check_figures.py --root . --strict
+
+# ✅ 手动跑 linter：用 Get-ChildItem 展开
+$node = "C:\Users\keriko\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe"
+& $node tools\svg-lint\bin\svg-lint.mjs (Get-ChildItem content\<页面目录>\figures\*.svg).FullName
+
+# ❌ 错：字面量通配符，退出码 2
+& $node tools\svg-lint\bin\svg-lint.mjs content\<页面目录>\figures\*.svg
 ```
 
 - 退出码 `1` = 有 error。**必须修到 `0 error(s), 0 warning(s)`。**
 - 只想看 error：加 `--quiet`。
-- 本机 node 若不在 PATH：`$env:COURSELINGO_NODE` 指过去，或用
-  `C:\Users\keriko\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe`。
-- 也可以跑封装：`python scripts/check_figures.py --root . --strict`
+- node 不在 PATH 时用 `COURSELINGO_NODE` 指过去。
+- 肉眼复核可以把单张 SVG 交给浏览器光栅化（Windows 上 `msedge.exe` / `chrome.exe`
+  加 `--headless=new --screenshot=out.png --window-size=W,H`），再量一次真实墨迹边距。
 
 ## 2. 调色板（**只能用这些**）
 
