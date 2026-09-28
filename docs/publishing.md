@@ -111,6 +111,51 @@ GitHub Pages 路径下这是机制保证（§7）。GitBook 路径下我们没�
 ### 6.1 仓库设置
 1. Settings → Pages → Build and deployment → **Source 选 "GitHub Actions"**。
    - 这一步必须先做：`actions/configure-pages` 在 Pages 未启用时拿不到站点信息会失败。
+   - **走 UI 是稳的；用 CLI 建站有一个顺序坑，见 §6.1.1。**
+
+<a id="pages-cli"></a>
+### 6.1.1 用 CLI 给**全新仓库**开 Pages：必须 POST，不是 PUT
+
+**这是 2026-09-28 部署 `cs168` 与 `mit-6.006` 时实测出来的，纠正了此前记错的一步。**
+
+此前记的流程是「`POST` 若返回 409『already enabled』，就改用 `PUT ... -f build_type=workflow`」。
+实测**对全新仓库，`PUT` 直接返回 404**：
+
+```
+gh api -X PUT repos/courselingo/cs168/pages -f build_type=workflow
+→ 404 Not Found
+```
+
+原因是 **`PUT` 是「更新一个已存在的 Pages 站点」，它不能创建站点**。全新仓库上还不存在站点，所以 404。
+
+第一次部署会在 `actions/configure-pages@v6` 失败：
+
+```
+Get Pages site failed. Error: Not Found
+Create Pages site failed. Error: Resource not accessible by integration
+```
+
+**`enablement: true` 救不了这个失败** —— `GITHUB_TOKEN` 不被允许创建 Pages 站点，
+所以工作流自己建不出来，必须先在仓库上把站点建好。
+
+**正确做法是 POST 建站、GET 确认：**
+
+```bash
+gh api -X POST repos/courselingo/<name>/pages -f build_type=workflow   # 建站
+gh api repos/courselingo/<name>/pages                                   # 确认
+# → {"build_type":"workflow", "html_url":"...", "https_enforced":true}
+
+gh run rerun <失败的-deploy-run-id>                                     # 重跑那次失败的部署
+```
+
+实测两个仓库的 `POST` 都**第一次就返回 200 且 `build_type` 已是 `workflow`**，没有 409。
+建站后重跑，两次部署都成功。
+
+> **这一步与「legacy Jekyll」是同一族坑的两个位置。**
+> 那个是「站点已存在但配置成了 legacy，于是发出去的是 README 的 Jekyll 渲染」；
+> 这个是「站点还不存在，于是必须先建」。**两次都表现为『看起来启用过了』。**
+> 判据只有一条：**`GET .../pages` 看 `build_type` 到底是什么**，不要凭 POST/PUT 的返回码推断。
+
 2. 在 **Custom domain** 里填域名（比如 `courselingo.example.com`），点 **Save**。
    - 顺序很重要：**先**在 GitHub 里登记域名，**再**去 DNS 服务商配置。反过来做，别人可能抢先在 GitHub Pages 上占用你的子域。
 
