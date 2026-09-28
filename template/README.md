@@ -90,6 +90,41 @@ node ~/.agents/skills/svg-diagram/tools/svg-lint/bin/svg-lint.mjs content/*/figu
 > 预期会有 1 类警告：本项目的品牌色（如文字色 `#1f2937`）不在该 linter 的内置调色板里。
 > 这是可接受的 —— 品牌色优先，别为了消警告改掉自己的配色。
 
+## 论文（经典课程的另一半）
+
+6.824 这类课程是**围绕论文**组织的 —— MapReduce、GFS、Raft、Paxos……所以论文在这里是一等公民：
+
+```
+papers.toml                     每篇论文的元数据 + **各自的**授权
+content/papers/<key>/index.md   论文页（导读或全文翻译），key 对应登记表
+```
+
+关键是：**论文的授权和课程无关，而且通常更严。** 多数论文的版权在出版社
+（ACM / IEEE / USENIX），而**翻译整篇论文 = 复制全部表达的衍生作品**，
+风险与翻译逐字稿同级。
+
+所以论文页分两档，闸门完全不同：
+
+| `output_mode` | 是什么 | 闸门 |
+| --- | --- | --- |
+| `guide` | **我们自己写的导读**：它解决什么问题、怎么解、代价是什么 | **不设闸门** —— 概念不受著作权保护 |
+| `translation` | 全文翻译 | 必须 `verified = true` **且** `allows_translation = true` |
+
+**只「核实了」不够** —— 核实的结果完全可能是「不允许翻译」。两个条件缺一不可，
+`validate.py` 与 `build.py` 各自独立拦截一次。
+
+> ⚠️ **「网上能免费下载」≠「可以翻译」。** 作者把 PDF 挂在自己主页上不构成任何授权。
+> 核实方法与逐篇结论见[论文授权](https://github.com/courselingo/courselingo/blob/main/docs/paper-licensing.md)。
+
+讲座可以声明它涉及哪些论文，站点会自动交叉链接：
+
+```toml
+papers = ["mapreduce", "gfs"]     # 必须是 papers.toml 中已登记的 key
+```
+
+新建论文页的步骤（登记 → 建目录 → 写稿）见 [SOP](https://github.com/courselingo/courselingo/blob/main/docs/SOP.md)，
+或直接用 `course-paper` 技能。
+
 ## 校验会拦下什么
 
 | 档位 | 检查 |
@@ -98,6 +133,8 @@ node ~/.agents/skills/svg-diagram/tools/svg-lint/bin/svg-lint.mjs content/*/figu
 | ❌ ERROR | front matter 缺字段、讲次/slug 重复、slug 格式错误 |
 | ❌ ERROR | `[[term:key]]` 引用了不存在的术语 |
 | ❌ ERROR | **疑似整段转载英文原文**（连续 >400 字符且几乎全为 ASCII） |
+| ❌ ERROR | **论文翻译闸门**：`translation` 但该论文未核实或不允许翻译 |
+| ❌ ERROR | 论文页的 `paper` key 未登记 / 重复；`papers = [...]` 引用了未登记的论文 |
 | ⚠️ WARN | glossary 里的英文原词出现在正文却没加标记（术语漂移） |
 
 ## 建新课程

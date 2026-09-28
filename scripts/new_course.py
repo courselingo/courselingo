@@ -59,6 +59,39 @@ other = false
 default_mode = "explanation"
 '''
 
+PAPERS_TOML = '''# CourseLingo 论文登记表
+#
+# 为什么单独一张表：**每篇论文的授权都不一样**（USENIX / ACM / IEEE / 技术报告），
+# 不能用课程级的一个布尔表示。翻译全文 = 复制整篇表达，风险与翻译逐字稿同级。
+#
+# ★「网上能免费下载」≠「可以翻译」。作者把 PDF 挂在自己主页上不构成任何授权。
+#
+# 规则：
+#   output_mode = "guide"        -> 我们自己写的导读，任何时候都可以做
+#   output_mode = "translation"  -> 全文翻译，必须 verified = true 且 allows_translation = true
+#
+# 核实方法见 docs/paper-licensing.md。
+
+# [[paper]]
+# key = "mapreduce"
+# title = "MapReduce: Simplified Data Processing on Large Clusters"
+# authors = ["Jeffrey Dean", "Sanjay Ghemawat"]
+# venue = "OSDI 2004"
+# year = 2004
+# publisher = "USENIX"
+# url = "https://www.usenix.org/conference/osdi-04/mapreduce-simplified-data-processing-large-clusters"
+#
+# [paper.license]
+# verified = false
+# terms = ""
+# evidence_url = ""
+# checked_at = ""
+# allows_translation = false
+# allows_commercial = false
+# share_alike = false
+# notes = ""
+'''
+
 GLOSSARY_TOML = '''# CourseLingo 术语表 —— 本项目的核心资产
 #
 # 规则：key 默认由 en 推导（小写、空格转连字符）。
@@ -129,6 +162,10 @@ def main(argv: list[str] | None = None) -> int:
         demo = out / "content" / "01-what-is-a-distributed-system"
         if demo.is_dir():
             shutil.rmtree(demo)
+        demo_papers = out / "content" / "papers"
+        if demo_papers.is_dir():
+            shutil.rmtree(demo_papers)
+        (out / "papers.toml").write_text(PAPERS_TOML, encoding="utf-8")
 
     (out / "course.toml").write_text(
         COURSE_TOML.format(
@@ -151,7 +188,8 @@ def main(argv: list[str] | None = None) -> int:
     print("  4. python scripts/validate.py && python scripts/build.py")
     if not args.keep_demo:
         print()
-        print("注意：演示讲座已移除，validate.py 现在会报「没有任何讲座」——这是预期的。")
+        print("注意：演示讲座与演示论文已移除，validate.py 现在会报「没有任何内容」——这是预期的。")
+        print("      论文页放在 content/papers/<key>/index.md，key 对应 papers.toml 中登记的条目。")
     return 0
 
 

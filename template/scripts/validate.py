@@ -30,9 +30,17 @@ REQUIRED_LICENSE = [
 REQUIRED_LECTURE = [
     "title", "lecture", "slug", "status", "source_kind", "source_url", "output_mode",
 ]
+REQUIRED_PAPER_PAGE = ["title", "paper", "status", "output_mode"]
+REQUIRED_PAPER_FIELDS = ["key", "title", "authors", "venue", "url"]
+REQUIRED_PAPER_LICENSE = [
+    "verified", "terms", "evidence_url", "checked_at",
+    "allows_translation", "allows_commercial", "share_alike",
+]
 VALID_STATUS = {"draft", "reviewed", "approved"}
 VALID_MODES = {"explanation", "transcript"}
+VALID_PAPER_MODES = {"guide", "translation"}
 VALID_SOURCE_KINDS = {"notes", "video", "textbook", "slides", "other"}
+PAPERS_DIRNAME = "papers"
 
 # 疑似整段转载原文的判定阈值
 VERBATIM_MIN_CHARS = 400
@@ -248,12 +256,168 @@ def check_glossary(gl: dict, rep: Report) -> dict[str, tuple[str, str]]:
     return index
 
 
+def check_body(rel: str, body: str, rep: Report, glossary_index: dict[str, tuple[str, str]]) -> None:
+    """正文层面的检查：术语标记引用 + 原文转载探测 + 术语漂移。讲座与论文页共用。"""
+    # 术语标记引用（行内 code 里的 [[term:key]] 是写法示例，不算引用）
+    used: set[str] = set()
+    for m in TERM_RE.finditer(INLINE_CODE_RE.sub("", body)):
+        key = m.group(1).lower()
+        if key not in glossary_index:
+            rep.error(rel, f"[[term:{key}]] 未在 glossary.toml 中定义")
+        used.add(key)
+
+    # 原文转载探测 + 术语漂移
+    for para in iter_paragraphs(body):
+        suspect = verbatim_suspect(para)
+        if suspect:
+            rep.error(
+                rel,
+                "疑似整段转载英文原文（违反内容策略）："
+                f"{suspect[:60]}…（{len(suspect)} 字符，几乎全为 ASCII）",
+            )
+        low = para.lower()
+        for key, (en, _zh) in glossary_index.items():
+            if key in used:
+                continue
+            if re.search(rf"(?<![A-Za-z0-9]){re.escape(en.lower())}(?![A-Za-z0-9])", low):
+                rep.warn(
+                    rel,
+                    f"术语 {en!r} 在正文出现但未加 [[term:{key}]] 标记（可能术语漂移）",
+                )
+
+
+def check_paper_registry(cfg: dict, rep: Report) -> dict[str, dict]:
+    """校验 papers.toml，返回 {key: paper}。"""
+    papers = cfg.get("paper")
+    if papers is None:
+        return {}
+    if not isinstance(papers, list):
+        rep.error("papers.toml", "[[paper]] 必须是数组表")
+        return {}
+
+    index: dict[str, dict] = {}
+    for i, paper in enumerate(papers, 1):
+        if not isinstance(paper, dict):
+            rep.error("papers.toml", f"第 {i} 个 [[paper]] 不是表")
+            continue
+        key = str(paper.get("key", "")).strip()
+        if not key:
+            rep.error("papers.toml", f"第 {i} 个 [[paper]] 缺少 key")
+            continue
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", key):
+            rep.error("papers.toml", f"key={key!r} 不合规（只要小写字母、数字与连字符）")
+        if key in index:
+            rep.error("papers.toml", f"重复的 paper key={key!r}")
+            continue
+        for field in REQUIRED_PAPER_FIELDS:
+            if field == "key":
+                continue
+            if field == "authors":
+                if not isinstance(paper.get("authors"), list) or not paper.get("authors"):
+                    rep.error("papers.toml", f"{key}: authors 必须是非空数组")
+            elif not str(paper.get(field, "")).strip():
+                rep.error("papers.toml", f"{key}: 缺少 {field}")
+
+        lic = paper.get("license")
+        if not isinstance(lic, dict):
+            rep.error("papers.toml", f"{key}: 缺少 [paper.license] 段")
+        else:
+            for field in REQUIRED_PAPER_LICENSE:
+                if field not in lic:
+                    rep.error("papers.toml", f"{key}: [paper.license].{field} 为必填")
+            if lic.get("verified") is True:
+                for field in ("terms", "evidence_url", "checked_at"):
+                    if not str(lic.get(field, "")).strip():
+                        rep.error(
+                            "papers.toml",
+                            f"{key}: license.verified = true 但 {field} 为空（必须可溯源）",
+                        )
+        index[key] = paper
+    return index
+
+
+def paper_allows_translation(paper: dict | None) -> bool:
+    """论文全文翻译闸门。
+
+    与逐字稿同级：翻译整篇论文是复制全部表达的衍生作品。
+    必须「已核实」**且**条款明确允许翻译，缺一不可。
+    """
+    if not isinstance(paper, dict):
+        return False
+    lic = paper.get("license")
+    if not isinstance(lic, dict):
+        return False
+    return lic.get("verified") is True and lic.get("allows_translation") is True
+
+
+def check_paper_page(
+    path: Path,
+    rel: str,
+    rep: Report,
+    papers_index: dict[str, dict],
+    glossary_index: dict[str, tuple[str, str]],
+    seen_keys: dict[str, str],
+) -> None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        rep.error(rel, f"读取失败：{exc}")
+        return
+
+    fm_text, body = split_front_matter(text)
+    if fm_text is None:
+        rep.error(rel, "缺少 +++ TOML front matter")
+        return
+    body = strip_html_comments(body)
+    try:
+        fm = tomllib.loads(fm_text)
+    except tomllib.TOMLDecodeError as exc:
+        rep.error(rel, f"front matter TOML 解析失败：{exc}")
+        return
+
+    if str(fm.get("kind", "")).strip() != "paper":
+        rep.error(rel, '论文页必须写 kind = "paper"')
+    for field in REQUIRED_PAPER_PAGE:
+        if field not in fm:
+            rep.error(rel, f"front matter 缺少必填字段 {field}")
+
+    if fm.get("status") not in VALID_STATUS:
+        rep.error(rel, f"status={fm.get('status')!r} 必须是 {sorted(VALID_STATUS)} 之一")
+
+    key = str(fm.get("paper", "")).strip()
+    if key:
+        if key in seen_keys:
+            rep.error(rel, f"paper={key!r} 与 {seen_keys[key]} 重复")
+        else:
+            seen_keys[key] = rel
+        if key not in papers_index:
+            rep.error(rel, f"paper={key!r} 未在 papers.toml 中登记")
+
+    mode = fm.get("output_mode")
+    if mode not in VALID_PAPER_MODES:
+        rep.error(rel, f"output_mode={mode!r} 必须是 {sorted(VALID_PAPER_MODES)} 之一")
+    elif mode == "translation" and not paper_allows_translation(papers_index.get(key)):
+        lic = (papers_index.get(key) or {}).get("license") or {}
+        rep.error(
+            rel,
+            f'⛔ 论文翻译闸门：output_mode="translation"，但论文 {key!r} 的授权不允许翻译'
+            f"（verified={lic.get('verified')!r}, allows_translation={lic.get('allows_translation')!r}）。"
+            "翻译整篇论文属于衍生作品，必须先逐篇核实。见 docs/paper-licensing.md",
+        )
+
+    if not str(fm.get("title", "")).strip():
+        rep.error(rel, "title 不能为空")
+
+    check_body(rel, body, rep, glossary_index)
+
+
 def check_lecture(
     path: Path,
     rel: str,
     rep: Report,
     glossary_index: dict[str, tuple[str, str]],
     cfg: dict,
+    papers_index: dict[str, dict],
     seen_lectures: dict[int, str],
     seen_slugs: dict[str, str],
 ) -> None:
@@ -317,32 +481,17 @@ def check_lecture(
             "翻译完整逐字稿属于衍生作品，必须先核实该类材料的授权。见 docs/content-policy.md",
         )
 
-    # 术语标记引用（行内 code 里的 [[term:key]] 是写法示例，不算引用）
-    used: set[str] = set()
-    for m in TERM_RE.finditer(INLINE_CODE_RE.sub("", body)):
-        key = m.group(1).lower()
-        if key not in glossary_index:
-            rep.error(rel, f"[[term:{key}]] 未在 glossary.toml 中定义")
-        used.add(key)
+    # 可选：本讲涉及哪些论文（须在 papers.toml 中登记）
+    papers_ref = fm.get("papers")
+    if papers_ref is not None:
+        if not isinstance(papers_ref, list):
+            rep.error(rel, "papers 必须是数组")
+        else:
+            for k in papers_ref:
+                if str(k) not in papers_index:
+                    rep.error(rel, f"papers 引用了未登记的论文 {str(k)!r}（见 papers.toml）")
 
-    # 原文转载探测 + 术语漂移
-    for para in iter_paragraphs(body):
-        suspect = verbatim_suspect(para)
-        if suspect:
-            rep.error(
-                rel,
-                "疑似整段转载英文原文（违反内容策略）："
-                f"{suspect[:60]}…（{len(suspect)} 字符，几乎全为 ASCII）",
-            )
-        low = para.lower()
-        for key, (en, _zh) in glossary_index.items():
-            if key in used:
-                continue
-            if re.search(rf"(?<![A-Za-z0-9]){re.escape(en.lower())}(?![A-Za-z0-9])", low):
-                rep.warn(
-                    rel,
-                    f"术语 {en!r} 在正文出现但未加 [[term:{key}]] 标记（可能术语漂移）",
-                )
+    check_body(rel, body, rep, glossary_index)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -371,25 +520,50 @@ def main(argv: list[str] | None = None) -> int:
     if gl:
         glossary_index = check_glossary(gl, rep)
 
+    papers_index: dict[str, dict] = {}
+    if (root / "papers.toml").exists():
+        papers_cfg = load_toml(root / "papers.toml", rep)
+        if papers_cfg:
+            papers_index = check_paper_registry(papers_cfg, rep)
+
     content_dir = root / "content"
     lectures: list[Path] = []
+    paper_pages: list[Path] = []
     if not content_dir.is_dir():
         rep.error("content/", "目录不存在")
     else:
-        lectures = sorted(content_dir.glob("*/index.md"))
-        if not lectures:
-            rep.error("content/", "没有任何讲座（content/<slug>/index.md）")
+        lectures = sorted(
+            p for p in content_dir.glob("*/index.md")
+            if PAPERS_DIRNAME not in p.relative_to(content_dir).parts
+        )
+        papers_dir = content_dir / PAPERS_DIRNAME
+        paper_pages = sorted(papers_dir.glob("*/index.md")) if papers_dir.is_dir() else []
+
+        if not lectures and not paper_pages:
+            rep.error(
+                "content/",
+                "没有任何内容（讲座 content/<slug>/index.md 或论文 content/papers/<key>/index.md）",
+            )
+
         seen_lectures: dict[int, str] = {}
         seen_slugs: dict[str, str] = {}
         for p in lectures:
             check_lecture(
                 p, str(p.relative_to(root)).replace("\\", "/"),
-                rep, glossary_index, cfg, seen_lectures, seen_slugs,
+                rep, glossary_index, cfg, papers_index, seen_lectures, seen_slugs,
+            )
+
+        seen_paper_keys: dict[str, str] = {}
+        for p in paper_pages:
+            check_paper_page(
+                p, str(p.relative_to(root)).replace("\\", "/"),
+                rep, papers_index, glossary_index, seen_paper_keys,
             )
 
     if not args.quiet:
         print(f"课程仓库：{root}")
-        print(f"讲座数量：{len(lectures)}   术语条目：{len(glossary_index)}")
+        print(f"讲座 {len(lectures)} 篇   论文页 {len(paper_pages)} 篇   "
+              f"术语 {len(glossary_index)} 条   论文登记 {len(papers_index)} 篇")
         print(f"授权状态：{'已核实' if license_verified else '未核实（仅允许 explanation 模式）'}")
         print("-" * 68)
 

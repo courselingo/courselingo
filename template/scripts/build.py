@@ -65,6 +65,19 @@ def license_allows(cfg: dict, source_kind: str) -> bool:
     return lic.get("verified") is True
 
 
+def paper_allows_translation(paper: dict | None) -> bool:
+    """与 validate.py 同一套论文翻译闸门。
+
+    「已核实」还不够 —— 条款必须**明确允许翻译**。翻译整篇论文是复制全部表达的衍生作品。
+    """
+    if not isinstance(paper, dict):
+        return False
+    lic = paper.get("license")
+    if not isinstance(lic, dict):
+        return False
+    return lic.get("verified") is True and lic.get("allows_translation") is True
+
+
 # --------------------------------------------------------------------------
 # 行内渲染
 # --------------------------------------------------------------------------
@@ -294,7 +307,7 @@ def page(
 """
 
 
-def nav_for(lectures: list[dict], current: str | None, base: str) -> str:
+def nav_for(lectures: list[dict], papers: list[dict], current: str | None, base: str) -> str:
     items = []
     for lec in sorted(lectures, key=lambda x: x["lecture"]):
         cls = ' class="active"' if current == lec["slug"] else ""
@@ -306,7 +319,22 @@ def nav_for(lectures: list[dict], current: str | None, base: str) -> str:
         else:
             items.append(f'<li{cls}><span>{label}</span>{draft}</li>')
     items.append(f'<li><a href="{base}glossary/index.html">术语表</a></li>')
-    return "<h2>课程目录</h2><ul>" + "".join(items) + "</ul>"
+
+    nav = "<h2>课程目录</h2><ul>" + "".join(items) + "</ul>"
+
+    if papers:
+        pitems = []
+        for paper in sorted(papers, key=lambda x: str(x.get("title", ""))):
+            key = str(paper.get("paper", ""))
+            cls = ' class="active"' if current == key else ""
+            mode = paper.get("output_mode")
+            tag = ' <span class="draft">导读</span>' if mode == "guide" else ""
+            pitems.append(
+                f'<li{cls}><a href="{base}papers/{key}/index.html">'
+                f'{html.escape(str(paper.get("title", "")))}</a>{tag}</li>'
+            )
+        nav += "<h2>论文</h2><ul>" + "".join(pitems) + "</ul>"
+    return nav
 
 
 CSS = """
@@ -434,12 +462,33 @@ def main(argv: list[str] | None = None) -> int:
             if en and zh:
                 terms[slugify(str(t.get("key") or en))] = (en, zh)
 
+    papers_index: dict[str, dict] = {}
+    pp_path = root / "papers.toml"
+    if pp_path.exists():
+        with pp_path.open("rb") as fh:
+            pp = tomllib.load(fh)
+        for p in pp.get("paper", []):
+            k = str(p.get("key", "")).strip()
+            if k:
+                papers_index[k] = p
+
+    content_dir = root / "content"
     lectures: list[dict] = []
-    for p in sorted((root / "content").glob("*/index.md")):
+    for p in sorted(content_dir.glob("*/index.md")):
+        if "papers" in p.relative_to(content_dir).parts:
+            continue
         fm_text, body = split_front_matter(p.read_text(encoding="utf-8"))
         fm = tomllib.loads(fm_text) if fm_text else {}
         lectures.append({**fm, "_path": p, "_body": body})
     lectures.sort(key=lambda x: x.get("lecture", 0))
+
+    paper_pages: list[dict] = []
+    papers_dir = content_dir / "papers"
+    if papers_dir.is_dir():
+        for p in sorted(papers_dir.glob("*/index.md")):
+            fm_text, body = split_front_matter(p.read_text(encoding="utf-8"))
+            fm = tomllib.loads(fm_text) if fm_text else {}
+            paper_pages.append({**fm, "_path": p, "_body": body})
 
     # 发布前的第二道闸门：即便有人跳过 validate.py，build 也不会渲染未授权的逐字稿。
     blocked = [
@@ -455,6 +504,25 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         print("   翻译完整逐字稿属于衍生作品，必须先核实授权。见 docs/content-policy.md", file=sys.stderr)
+        return 1
+
+    # 第三道闸门：论文全文翻译 —— 「已核实」还不够，条款必须明确允许翻译
+    blocked_papers = [
+        pg for pg in paper_pages
+        if pg.get("output_mode") == "translation"
+        and not paper_allows_translation(papers_index.get(str(pg.get("paper", ""))))
+    ]
+    if blocked_papers:
+        print("⛔ 构建中止：以下论文页是 translation 模式，但该论文的授权不允许翻译。", file=sys.stderr)
+        for pg in blocked_papers:
+            key = str(pg.get("paper", ""))
+            lic = (papers_index.get(key) or {}).get("license") or {}
+            print(
+                f"   - {key}  (verified={lic.get('verified')!r}, "
+                f"allows_translation={lic.get('allows_translation')!r})",
+                file=sys.stderr,
+            )
+        print("   翻译整篇论文属于衍生作品。见 docs/paper-licensing.md", file=sys.stderr)
         return 1
 
     if out_dir.exists():
@@ -483,17 +551,26 @@ def main(argv: list[str] | None = None) -> int:
         for lec in lectures
     )
     src = course.get("homepage") or ""
+    plis = "".join(
+        f'<li><a href="{base}papers/{paper.get("paper")}/index.html">'
+        f'{html.escape(str(paper.get("title", "")))}</a>'
+        + (' <span class="draft">导读</span>' if paper.get("output_mode") == "guide" else "")
+        + "</li>"
+        for paper in sorted(paper_pages, key=lambda x: str(x.get("title", "")))
+    )
+    papers_section = f'<h2>经典论文</h2><ul class="lecture-list">{plis}</ul>' if plis else ""
     home_body = f"""<h1>{html.escape(site_title)}</h1>
 <p class="muted">{html.escape(str(course.get('title','')))} · {html.escape(str(course.get('institution','')))} {html.escape(str(course.get('course_number','')))}</p>
 <h2>讲座</h2>
 <ul class="lecture-list">{lis}</ul>
+{papers_section}
 <h2>关于</h2>
 <p>本站是 <strong>CourseLingo（译课 AI）</strong> 的产出示例：用中文重新讲解经典 CS 课程的概念，而不是逐句翻译原文。</p>
 <p>原始课程：{'<a href="' + html.escape(str(src), quote=True) + '">' + html.escape(str(src)) + '</a>' if src else '（未填写）'}</p>"""
     (out_dir / "index.html").write_text(
         page(
             site_title=site_title, page_title="", description=str(course.get("title", "")),
-            body_html=home_body, nav_html=nav_for(lectures, None, base),
+            body_html=home_body, nav_html=nav_for(lectures, paper_pages, None, base),
             base=base, banner=banner, footer_note=footer_note,
         ),
         encoding="utf-8",
@@ -521,7 +598,7 @@ def main(argv: list[str] | None = None) -> int:
                 site_title=site_title, page_title=str(lec.get("title", "")),
                 description=f'{lec.get("title")} — {site_title}',
                 body_html=head + meta + draft + body_html,
-                nav_html=nav_for(lectures, slug, base),
+                nav_html=nav_for(lectures, paper_pages, slug, base),
                 base="../", banner=banner, footer_note=footer_note,
             ),
             encoding="utf-8",
@@ -529,6 +606,63 @@ def main(argv: list[str] | None = None) -> int:
         fig_src = lec["_path"].parent / "figures"
         if fig_src.is_dir():
             shutil.copytree(fig_src, target / "figures", dirs_exist_ok=True)
+
+    # 论文页
+    for pg in paper_pages:
+        key = str(pg.get("paper", ""))
+        paper = papers_index.get(key) or {}
+        lic = paper.get("license") or {}
+        body_html, _ = render_markdown(pg["_body"], terms)
+        head = f'<h1>{html.escape(str(pg.get("title", "")))}</h1>'
+
+        authors = paper.get("authors") or []
+        bits = [
+            html.escape(str(paper.get("title", ""))),
+            "、".join(html.escape(str(a)) for a in authors),
+            html.escape(str(paper.get("venue", ""))),
+            html.escape(str(paper.get("publisher", ""))),
+        ]
+        url = str(paper.get("url", ""))
+        mode = pg.get("output_mode")
+        mode_label = "全文翻译" if mode == "translation" else "原创导读"
+        pmeta = (
+            f'<p class="muted">{" · ".join(b for b in bits if b)}'
+            + (f' · <a href="{html.escape(url, quote=True)}">原文</a>' if url else "")
+            + f" · {mode_label}</p>"
+        )
+
+        allowed = paper_allows_translation(paper)
+        terms_txt = str(lic.get("terms", ""))
+        if mode == "translation":
+            payload = "本篇为全文翻译"
+        else:
+            payload = "本篇为我们自己撰写的导读，不含原文段落"
+        licnote = (
+            '<div class="notice">📄 授权：'
+            + ("已核实、允许翻译" if allowed else "未核实，或条款未明确允许全文翻译")
+            + (f"（{html.escape(terms_txt)}）" if terms_txt else "")
+            + f" —— {payload}。见 docs/paper-licensing.md</div>"
+        )
+        draft = (
+            '<div class="notice">📝 本文为<strong>草稿</strong>，尚未经过人工复核。</div>'
+            if pg.get("status") == "draft" else ""
+        )
+
+        pd = out_dir / "papers" / key
+        pd.mkdir(parents=True, exist_ok=True)
+        (pd / "index.html").write_text(
+            page(
+                site_title=site_title, page_title=str(pg.get("title", "")),
+                description=f'{pg.get("title")} — {site_title}',
+                body_html=head + pmeta + licnote + draft + body_html,
+                nav_html=nav_for(lectures, paper_pages, key, base),
+                base="../../", banner=banner, footer_note=footer_note,
+            ),
+            encoding="utf-8",
+        )
+        fig_src = pg["_path"].parent / "figures"
+        if fig_src.is_dir():
+            shutil.copytree(fig_src, pd / "figures", dirs_exist_ok=True)
 
     # 术语表页
     rows = "".join(
@@ -544,14 +678,15 @@ def main(argv: list[str] | None = None) -> int:
     (out_dir / "glossary" / "index.html").write_text(
         page(
             site_title=site_title, page_title="术语表", description="课程术语表",
-            body_html=gl_body, nav_html=nav_for(lectures, None, base),
+            body_html=gl_body, nav_html=nav_for(lectures, paper_pages, None, base),
             base="../", banner=banner, footer_note=footer_note,
         ),
         encoding="utf-8",
     )
 
     print(f"构建完成：{out_dir}")
-    print(f"  课程：{site_title}  |  讲座 {len(lectures)} 篇  |  术语 {len(terms)} 条")
+    print(f"  课程：{site_title}  |  讲座 {len(lectures)} 篇  |  论文 {len(paper_pages)} 篇  "
+          f"|  术语 {len(terms)} 条")
     print(f"  授权：{'已核实' if verified else '未核实（首页已显示提示条）'}")
     print(f"  入口：{out_dir / 'index.html'}")
     return 0
