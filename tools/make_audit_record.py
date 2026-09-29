@@ -117,6 +117,34 @@ def visual_summary(course_dir: pathlib.Path, slug: str) -> tuple[dict[str, int],
     return dist, bad
 
 
+def adjudications_note(course_dir: pathlib.Path, slug: str) -> str:
+    """指出本讲有哪些图**已被实测裁定覆盖**。
+
+    ★ 为什么需要（2026-09-29，实测）：本脚本第一版只查新鲜度、**不读裁定表**，
+    于是它在 `cs168` 第 2 讲上仍报「需小修 1」（`headers-1`），
+    而 `headers-1` **已经被裁定为可用**（实测两框都 344、外边距 22/22）。
+    ⇒ 与「不查新鲜度」是同一类问题：**工具不读那个权威来源。**
+    ⇒ 一份审核记录应当同时写出**原始判定**与**已被裁定的部分**，否则 Lead 会重复处置。
+    """
+    adj = course_dir / "docs" / "audit" / "visual-adjudications.md"
+    if not adj.exists():
+        return ""
+    figs = {f.stem for f in (course_dir / "content" / slug / "figures").glob("*.svg")}
+    rows: list[str] = []
+    for ln in adj.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not ln.startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.strip("|").split("|")]
+        if len(cells) < 4 or cells[0] in ("图", "---") or set(cells[0]) <= {"-"}:
+            continue
+        if cells[0] in figs and "可用" in cells[2]:
+            rows.append(f"- `{cells[0]}`：原判「{cells[1]}」→ 裁定「{cells[2]}」｜依据：{cells[3][:100]}…")
+    if not rows:
+        return ""
+    return ("\n**★ 其中以下图已由 `docs/audit/visual-adjudications.md` 的实测裁定覆盖**"
+            "（`check_reviewed.py` 会读它）：\n\n" + "\n".join(rows) + "\n")
+
+
 def make(course_dir: pathlib.Path, slug: str, force: bool) -> str:
     idx = course_dir / "content" / slug / "index.md"
     if not idx.exists():
@@ -134,6 +162,7 @@ def make(course_dir: pathlib.Path, slug: str, force: bool) -> str:
     bad_gates = [f"{k}={v}" for k, v in gs if v != 0]
     fc_name, fc_line = factcheck_summary(course_dir, slug)
     dist, bad_figs = visual_summary(course_dir, slug)
+    adj_note = adjudications_note(course_dir, slug)
     h = nhash(idx)[:16]
 
     body = f"""# 质量审核记录 · {slug}（第 {int(n)} 讲）
@@ -177,7 +206,7 @@ def make(course_dir: pathlib.Path, slug: str, force: bool) -> str:
 
 """ + (("**⬜ 待处置（非「可用」的图）**：\n\n" + "\n".join(f"- `{b}`" for b in bad_figs) +
         "\n\n⇒ 每一张要么改，要么写进 `docs/audit/visual-adjudications.md`（实测裁定，须含依据数值）。\n")
-       if bad_figs else "**✅ 全部「可用」。**\n") + f"""
+       if bad_figs else "**✅ 全部「可用」。**\n") + adj_note + f"""
 ## 5. 第三道人工闸门 · 透镜 3（陌生读者测试）
 
 **⬜ 待 Lead 执行**（用一个**无项目上下文**的 subagent，只给它这一页 + 8 个机制问题）。
