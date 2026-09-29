@@ -30,10 +30,25 @@ import sys
 PY = sys.executable
 # ★ 本文件住在**平台仓**的 tools/ 里（`附录六十三` 修：我原先把它建在工作区根，而那不是 git 仓）
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent / "courses"
+# ★ `--strict` 只加在「页面会渲染坏」的那两道门上（2026-09-29 修，附录七十五）。
+#
+# 起因：一位作者修好了 `audit_content.py` 里「点名不足」那条分支的 `NameError`
+#   （它此前会让**点名不足的页面**整道闸门崩掉，于是那条警告报不出来），
+#   并把计数从**子串匹配**改成**词边界** ——
+#   ⇒ 而修好之后，**五门课同时变红**：原先池里的 `Go` 命中 `goal`/`go through`、
+#     `Raft` 命中 `draft` ⇒ 计数虚高 ⇒ 那些页**不该通过却通过了**。
+#
+# ⇒ 而那些红是**真的**（它们是内容欠账），而它们不该**阻塞提交**：
+#   · `validate --strict`  ⇒ 术语未定义 / 漂移 / 名字写两遍 —— 这些**会让页面渲染坏** ⇒ 必须挡
+#   · `audit_content --strict` ⇒ 点名不足 / 密度 / 破折号 —— 这些是**质量欠账**，页面是好的
+#
+# ★ 而这个区分很重要，因为若 WARN 也挡提交，我为了能提交就会去改内容 ——
+#   而那正是「**为工具改内容**」，是本项目明确禁止的。
+# ⇒ 所以：**ERROR 挡住提交，WARN 只当清单**。
 GATES = [
     ("validate", ["--strict"]),
     ("check_style", []),
-    ("audit_content", ["--strict"]),
+    ("audit_content", []),
     ("check_figures", ["--strict"]),
     ("check_reviewed", []),
 ]
