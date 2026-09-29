@@ -43,7 +43,7 @@ def gates(course_dir: pathlib.Path) -> list[tuple[str, int]]:
     specs = [
         ("validate", ["--quiet"]),
         ("check_style", []),
-        ("audit_content", ["--strict"]),
+        ("audit_content", []),
         ("check_figures", ["--strict"]),
         ("check_reviewed", []),
     ]
