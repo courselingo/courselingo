@@ -76,9 +76,16 @@ def factcheck_summary(course_dir: pathlib.Path, slug: str) -> tuple[str, str]:
 
 
 def visual_summary(course_dir: pathlib.Path, slug: str) -> tuple[dict[str, int], list[str]]:
-    """返回 (判定分布, 非「可用」的图名列表)。"""
+    """返回 (判定分布, 需要 Lead 处置的图名列表)。
+
+    ★★ 必须**查新鲜度** —— 否则会把「早已修好」的旧判定报成拦路石。
+    实测（2026-09-29，本脚本第一版）：它报 `cs168` 第 2 讲「有错误 2 张」（layers-3 / layers-6），
+    而这两张**作者早已修好并报了新哈希** —— 因为报告是**过期**的，而本函数当时不看这一点。
+    **⇒ 一份精确的统计若建立在过期报告上，它比没有统计更糟**（它会让人去修已经修好的东西）。
+    ⇒ 与 `refresh_one.py` 同一口径：**报告里记的被复核 SVG 哈希 ≠ SVG 的当前 nhash ⇒ 过期**。
+    """
     figs = sorted((course_dir / "content" / slug / "figures").glob("*.svg"))
-    dist = {"可用": 0, "需小修": 0, "有错误": 0, "?": 0, "缺报告": 0}
+    dist = {"可用": 0, "需小修": 0, "有错误": 0, "?": 0, "缺报告": 0, "过期": 0}
     bad: list[str] = []
     for f in figs:
         rep = course_dir / "docs" / "audit" / "visual-review" / f"{course_dir.name}__{f.stem}.md"
@@ -90,6 +97,14 @@ def visual_summary(course_dir: pathlib.Path, slug: str) -> tuple[dict[str, int],
             bad.append(f"{f.stem}（无报告）")
             continue
         txt = rep.read_text(encoding="utf-8", errors="replace")
+        # ★ 新鲜度：报告里记的被复核 SVG 哈希 必须等于 SVG 的当前 nhash
+        m = re.search(r"SHA256\(前16\)[：:]\s*`?([0-9A-F]{16})", txt)
+        cur = nhash(f)[:16]
+        if not m or (m.group(1) != cur and not cur.startswith(m.group(1))):
+            dist["过期"] += 1
+            bad.append(f"{f.stem}（**报告过期**：报告记 {m.group(1) if m else '?'} / 现值 {cur}）"
+                       "⇒ 先重跑视觉复核，不要照这份报告的判定改")
+            continue
         for k in ("有错误", "需小修", "可用"):
             if re.search(rf"判定[：:]\s*\**\s*{k}", txt):
                 dist[k] += 1
