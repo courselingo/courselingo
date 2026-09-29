@@ -68,3 +68,46 @@
 
 > **按源讲次的结构写中文讲解，术语给中英对照，难句给原文短引；
 > 不逐字全译，不转载原图。**
+
+
+---
+
+## 8. 补记（第二轮，由 `mlsys-author` 发现并实测）：**逐字稿在工程上也拿不到**
+
+**四条理由之外，还有第五条，而它是独立的一条（不是「不划算」，是「做不到」）：**
+
+**CMU 15-442 的课件是**图片型 PDF**，文本层不可用。** 实测：
+
+```
+_sources/mlsys-15442/text-clean/mlsys-slide-01-course-introduction.txt
+  201,157 字符 —— 但内容形如：
+    「AutomatedApproachestoAccelerateMachineLearningZhihaoJia|StanfordUniversity」
+    「15 - 442 / 15 - 642 Mac hi ne Lea rn i ng Systems Sp ri ng2026」
+                      ↑「Machine」被切成「Mac hi ne」，「Learning」被切成「Lea rn i ng」
+    ⇒ 词内被切碎、词间无空格
+```
+
+**对照参照**（`_sources/MIT6_006F11_lec01.pdf.clean.txt`，文本层正常）：
+```
+  「Lecture 1 / Introduction and Peak Finding / 6.006 / Fall 2011 / Lecture 1: …」
+  ⇒ 词完整、有空格、可直接检索
+```
+
+**⇒ 所以对这门课而言，即便把 `output_mode` 改成 `transcript`，也**没有可靠的逐字底稿可用** ——
+只能先人工回译，而回译出来的东西**不是**「复制原作的全部表达」，**法律上也就不再是那个 `transcript` 了**。**
+
+**⇒ 结论**：`transcript` 对 CMU 15-442 **工程上不可行**；这不是授权问题，是**源材料形态**问题。
+**⇒ 而它对其它几门课是否成立，要各自验一次**（6.006 的文本层是好的；ETH 与 cs168 未验）。
+
+## 9. 补记（基础设施）：`build_site.py` 需要装了 mkdocs 的那个 Python
+
+**`mlsys-author` 实测报的，我据此广播给全部四门课的作者：**
+
+| 项 | 值 |
+| --- | --- |
+| **跑 `build_site.py` 用的 Python** | `C:\Users\keriko\AppData\Local\Programs\Python\Python311\python.exe` |
+| **原因** | PATH 上的 python（hermes venv）**没有 pip/mkdocs**；Python311 本来也没有，已按 `websrc/requirements.txt` 装了 |
+| **已装版本** | `mkdocs==1.6.1` / `mkdocs-material==9.7.7` / `pymdown-extensions==12.1` |
+
+**⇒ 五道机检里的其它四道用哪个 Python 都行；只有 `build_site` 必须用 Python311。**
+**⇒ 而这是**本机环境事实**，不是仓库内容 —— 所以它不能靠提交文件解决，只能靠广播。**
