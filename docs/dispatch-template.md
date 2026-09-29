@@ -145,3 +145,38 @@ cd <课程仓>
 ★ **不要碰别的讲次、`scripts/`**（`scripts/` 的改动由 Lead 统一做）。
 ★ `glossary.toml` 有并发写入 ⇒ **写前重读一次**，在你的段里追加，别覆盖别人的。
 ```
+
+---
+
+## 七、两条跨作者可复用的操作知识
+
+### ① 大文件下载不能放在会被超时打断的**前台**调用里
+
+```
+· 一次是 curl 撞上工具的 120 秒上限被杀 ⇒ **文件根本没落盘**（Python 报 FileNotFoundError）
+· 而另一次更隐蔽：**落了盘、curl 返回 0、却只有 614,400 字节且尾部没有 `%%EOF`**
+⇒ **改用显式后台作业**，并仍然跑四道校验。
+⇒ 而它与「接口说成功不代表结果可用」同型：`curl exit=0` 与「文件完整」是两件事。
+```
+
+### ② pip 用 **http** 代理，不要用 socks5
+
+```
+· `ALL_PROXY=socks5://127.0.0.1:7892` ⇒ pip 报
+  **`Missing dependencies for SOCKS support`**（它需要 `PySocks`，而装 PySocks 又要先能装东西）
+· 换成 **`HTTPS_PROXY=http://127.0.0.1:7892`** ⇒ 一次就成
+★ 而它与 `curl` 不同：**curl 能直接走 `socks5h`，而 pip 不能** ——
+  所以「同一个代理」对不同的工具**不通用**。
+★ 实例：本项目的 `build_site.py` 要 `python -m mkdocs`，而 DSH 的 bundled runtime 里
+  原本没有 mkdocs ⇒ **四门课的第六道门同时失效**，三位作者各报了一次同一处。
+  修法就是那一条 pip 命令（装 `mkdocs` 与 `mkdocs-material`）。
+```
+
+### ③ 图文件名必须带本讲前缀
+
+```
+· 一位作者最初用 `lecture-map.svg`，而**第 11 讲已经有同名文件** ⇒
+  `build_site` 直接报「同一 section 的配图是**平铺存放**的」⇒ 冲突。
+· 他的处置是对的：**13 张全部改成 `<本讲前缀>-*.svg`**，并同步图内 id 与 markdown 引用。
+⇒ 所以：**图名一律用 `content/` 目录名里的那个 slug 前缀**，别用 `fig-1.svg` 这种通用名。
+```
