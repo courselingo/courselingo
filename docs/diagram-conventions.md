@@ -372,3 +372,56 @@ node "$env:USERPROFILE\.agents\skills\svg-diagram\tools\svg-lint\bin\svg-lint.mj
 | 版本 | 变更 |
 | --- | --- |
 | v1 | 首次冻结：画布/网格、token 表、描边、箭头、字体栈、文字定位、间距与绘制顺序、图型速查、跨讲一致性、无障碍、暗色模式、示例、校验方式与外部技能授权说明 |
+
+
+---
+
+## 斜线段不是终点：**C/Q 曲线就是它的修法**（2026-09-29 补）
+
+**发生过一次误判。**作者报：
+> 「房规禁止斜线段 ⇒ **经典时序图在本规范下画不出来**」
+> （于是它改了标题、把连接线画成阶梯，并把原因写进正文给读者。）
+
+**⇒ 而修法一直写在本项目自己的 linter 里。**`tools/svg-lint/lib/checks/connector-geometry.mjs`：
+```js
+// :307  A straight segment is only allowed along an axis;
+//       a diagonal one has to become a C / Q curve.
+// :314  code: 'diagonal-straight-line'
+// :316  repair: { attribute: 'd', actual: `L ...`,
+//                expected: 'an axis-aligned L, or a C/Q curve' }
+```
+**⇒ 也就是说：那条规矩**不是**「不能连接不同行不同列的两个东西」，
+而是「**连接它们的那条线不能是直线**」—— 用曲线就行。**
+
+### 怎么画一条「斜的连接」：用 cp2 控制箭头方向
+
+**曲线的终点切线决定了 `orient="auto"` 画出来的箭头朝哪。**
+**⇒ 而终点切线由**第二个控制点 cp2 → 终点**这一段的向量决定。**
+**⇒ 所以把 cp2 的那个坐标分量对齐到终点，箭头就正：**
+
+| 想要的方向 | cp2 的约束 | 写法 |
+| --- | --- | --- |
+| ↓ 下 | `cp2.x = end.x`，`cp2.y < end.y` | `C ...,... ex,ey-20 ex,ey` |
+| → 右 | `cp2.y = end.y`，`cp2.x < end.x` | `C ...,... ex-20,ey ex,ey` |
+| ← 左 | `cp2.y = end.y`，`cp2.x > end.x` | `C ...,... ex+20,ey ex,ey` |
+| ↑ 上 | `cp2.x = end.x`，`cp2.y > end.y` | `C ...,... ex,ey+20 ex,ey` |
+
+**★★ 而本项目 linter 检查的正是这件事**（`connector-geometry.mjs:436` 与 `:454`）：
+```js
+if (!diagonal && Math.abs(cp2.y - end.y) > TANGENT_TOLERANCE) { ... }
+if (!diagonal && Math.abs(cp2.x - end.x) > TANGENT_TOLERANCE) { ... }
+```
+**⇒ 所以「箭头是歪的」与「线段是斜的」在本项目里是同一条判据的两个方向：
+前者要 `cp2` 对齐终点，后者要直线只走轴。**
+
+### ⇒ 因此
+
+> **时序图是可以画的**：message 那条线用「起于竖直、终于水平」的 C 曲线，
+> **它既是曲线（不违反斜线段）又让箭头朝对方向（cp2 对齐终点）。**
+> **★ 而若某张图在旧写法下被判「画不出来」，先读一遍 linter 给出的 `repair` ——
+>   修法通常就在那条报错里。**
+
+**★★ 一条更一般的：**
+> **报错信息里的 `repair` 字段是**规范作者留给写的人的唯一入口**。
+> ⇒ 而它只有在**派单把那条报错连同 repair 一起转述**时才会到达写的人手里。
+> ⇒ **我此前的配图派单只转述了「不许斜线段」，没转述 `or a C/Q curve`** —— 那是我的漏。**
